@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "NEMAT Flash Drop"
+version = "1.0.0"
+id = "artifacts/nemat-drop"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+localPort = 18486
+name = "web"
+paths = ["/"]
+
+[services.development]
+run = "pnpm --filter @workspace/nemat-drop run dev"
+
+[services.env]
+PORT = "18486"
+BASE_PATH = "/"
+
+[services.production]
+build = ["pnpm", "--filter", "@workspace/nemat-drop", "run", "build"]
+publicDir = "artifacts/nemat-drop/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"

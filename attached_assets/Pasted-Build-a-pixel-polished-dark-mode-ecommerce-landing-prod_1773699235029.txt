@@ -1,0 +1,181 @@
+Build a pixel-polished dark-mode ecommerce landing/product page inspired by a premium “flash drop” trading card site.
+
+Stack:
+- React + Vite
+- Tailwind CSS
+- Clean component-based structure
+- Fully responsive
+- No backend required
+- Use local mock data for the product, pull probabilities, and possible pulls
+
+Overall aesthetic:
+- Black / near-black background throughout
+- Luxury editorial + gaming storefront hybrid
+- Strong contrast with cyan accent buttons and countdown timer
+- Typography should feel elegant and premium:
+  - small uppercase tracking-heavy labels
+  - serif-style or editorial-looking large product title
+  - clean sans-serif body copy
+- Very subtle borders, separators, and panel divisions
+- Spacious layout with lots of negative space
+- Slight glow around the product pack image
+- Minimal but refined hover effects
+- Avoid anything cartoonish or overly playful
+
+Main layout:
+- Full viewport 2-column layout on desktop
+- Left column fixed/sticky feeling:
+  - black background
+  - small wordmark in top-left: “NEMAT”
+  - centered product pack image
+  - faint green glow halo behind the pack
+  - beneath image, small label: “NEXT DROP REVEALS IN”
+  - large cyan digital-style countdown timer
+  - below that, a blurred/disabled dark rectangular button area to imply gated action or sold-out/private state
+- Right column scrollable content panel:
+  - very dark charcoal background, slightly lighter than left
+  - sections stacked vertically with lots of spacing
+  - each section separated by subtle horizontal dividers
+
+Top product info section:
+- Small uppercase status line: “FLASH DROP // ACTIVE”
+- Large title:
+  - “Teenage Mutant Ninja Turtles”
+  - second line smaller subtitle: “Collector Booster Pack”
+- Centered countdown block labeled “DEAL EXPIRES”
+- Price row with three columns:
+  - TCG BEST with strikethrough price $37.49
+  - TODAY’S DROP highlighted in cyan with price $32
+  - YOU SAVE with cyan 15%
+- An “INTEL REPORT” section below containing several paragraphs of marketing copy
+- In the copy, certain names/keywords should be highlighted in gold/yellow
+- Bottom sticky purchase bar or anchored purchase area:
+  - quantity selector with minus / number / plus
+  - price at right
+  - full-width cyan “ACQUIRE” button in uppercase with wide tracking
+
+Product specifications section:
+- Header: “PRODUCT SPECIFICATIONS”
+- Two-column specs grid:
+  - SET: Teenage Mutant Ninja Turtles
+  - RELEASE: 2025
+  - PACKS / BOX: 1
+  - CARDS / PACK: 15
+- Below that a “CONTENTS” bullet list:
+  - 15 Magic: The Gathering cards
+  - May contain these cards: TMT 1–190, 196–314; TMC 1–97; PZA 1–20
+  - 0–3 surge foil cards
+  - 9–12 traditional foil cards
+  - 5 cards of rarity rare or higher
+  - 3–4 uncommon cards
+  - 5–6 common cards
+  - 1 land card
+  - Borderless signature Kevin Eastman headliner card in <1% of boosters
+- Include a small copyright line underneath
+
+Oracle’s Insight section:
+- Header label: “ORACLE’S INSIGHT”
+- Title: “Pull Probability”
+- Small decorative icons aligned right near the title
+- Add a stylized donut / segmented radial chart in the center
+- Center text inside chart:
+  - Common
+  - 27.0%
+  - Standard cards
+- Use these categories and percentages:
+  - Common — 27%
+  - Uncommon — 23%
+  - Rare — 22%
+  - Mythic Rare — 14%
+  - Borderless — 9%
+  - Eastman Art — 5%
+- Include a legend in two columns under the chart
+- Each legend item should have a small outlined square or badge with its initial and matching accent color
+- Do not use bright dashboard colors everywhere — keep colors restrained and premium against black
+
+Possible Pulls section:
+- Header: “POSSIBLE PULLS”
+- Grid of 5 cards/items
+- Each item includes:
+  - optional card image area
+  - title in gold/yellow
+  - approximate probability below, like ~2% or ~9%
+- Items:
+  - Leonardo — ~2%
+  - Donatello — ~2%
+  - Raphael — ~2%
+  - Michelangelo — ~2%
+  - Borderless Source Material — ~9%
+- Some card slots can intentionally show “No image” placeholders, while one prominent item should show an actual mock card image
+- Use a clean 3-column or responsive staggered grid depending on screen size
+
+Email capture section:
+- Header: “Never Miss a Drop”
+- Supporting text: “Get notified when the next sealed deal goes live.”
+- Email input on the left
+- Cyan subscribe button on the right
+- Keep it minimal and elegant
+
+Interaction behavior:
+- Sticky left panel on desktop while right side scrolls
+- On mobile, collapse into single-column with the product image and timer first
+- Smooth hover transitions on buttons and quantity controls
+- Countdown timer should run live in the browser
+- Quantity selector should update displayed total price
+- Acquire button should have a subtle hover darkening / glow effect
+- FAQ or modal not needed
+
+Design details to match:
+- Large cyan button with black text and wide letter spacing
+- Cyan countdown digits
+- Small uppercase labels with high tracking and low contrast gray
+- White main text
+- Muted gray body copy
+- Gold/yellow highlights for names and special pull labels
+- Thin dividers between sections
+- Rounded corners should be subtle, not bubbly
+- Page should feel like a premium collectible “drop” experience, similar to a luxury streetwear release page mixed with a trading card storefront
+
+Component structure:
+- App
+- LeftShowcasePanel
+- RightContentPanel
+- ProductHeroSection
+- PriceSummary
+- IntelReport
+- PurchaseBar
+- ProductSpecifications
+- PullProbabilityChart
+- PossiblePullsGrid
+- EmailSignup
+- CountdownTimer
+- QuantitySelector
+
+Implementation notes:
+- Use a static product image placeholder if an asset is not provided
+- Use inline mock data in a separate file for easy editing
+- Use SVG or CSS to build the donut chart if possible
+- Make sure the layout feels premium and close to a designed prototype, not like a default template
+- Include comments showing where I can swap brand name, product text, prices, and image assets
+- Keep code clean and production-looking
+
+Use this exact content/copy where relevant:
+Brand: NEMAT
+Product: Teenage Mutant Ninja Turtles
+Subtitle: Collector Booster Pack
+TCG Best: $37.49
+Today’s Drop: $32
+You Save: 15%
+
+Intel Report copy:
+“These things vanished faster than a pizza at the lair the last time we saw them. But fear not!!! Another batch of mutagen-enhanced TMNT Magic Collector Boosters just crawled out of the sewer and they are LOADED.
+
+We’re talking Turtle-powered rares and mythic rares, traditional foils shining brighter than a freshly sharpened katana, and full-art lands that look like they were pulled straight from the underground tunnels of NYC. And yes...there’s a chance at the borderless source-material cards dripping with nostalgia thicker than mozzarella on a late-night pepperoni slice.
+
+But the REAL headline? Ohhhh yes...
+
+All four Turtles. Leonardo, Donatello, Raphael, and Michelangelo. Illustrated by the original co-creator himself, Kevin Eastman.
+
+I mean... come on. That’s basically the cardboard equivalent of finding the secret entrance to the sewer lair.”
+
+Create the full working site, not just a mockup.
