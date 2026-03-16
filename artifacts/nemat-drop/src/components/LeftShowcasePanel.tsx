@@ -33,18 +33,12 @@ export default function LeftShowcasePanel() {
           }}
         />
         {/* Pack image — swap src for real product image */}
-        <div className="relative z-10 w-52 h-72 flex items-center justify-center rounded-lg border border-white/[0.06] bg-gradient-to-b from-[#111] to-black shadow-[0_0_60px_rgba(34,211,238,0.08)]">
-          <div className="flex flex-col items-center gap-3 p-6 text-center">
-            {/* Placeholder artwork icon */}
-            <svg width="56" height="56" viewBox="0 0 56 56" fill="none" className="opacity-30">
-              <rect x="4" y="4" width="48" height="48" rx="4" stroke="#22d3ee" strokeWidth="1.5"/>
-              <path d="M14 38L22 26L28 33L34 24L42 38H14Z" fill="#22d3ee" fillOpacity="0.3"/>
-              <circle cx="20" cy="20" r="4" fill="#22d3ee" fillOpacity="0.3"/>
-            </svg>
-            <span className="text-[9px] uppercase tracking-[0.2em] text-gray-600">
-              Pack Image
-            </span>
-          </div>
+        <div className="relative z-10 w-52 h-72 rounded-lg overflow-hidden shadow-[0_0_60px_rgba(34,211,238,0.12)]">
+          <img
+            src="/tmnt-pack.png"
+            alt="Teenage Mutant Ninja Turtles Magic: The Gathering Collector Booster Pack"
+            className="w-full h-full object-cover"
+          />
         </div>
       </div>
 
