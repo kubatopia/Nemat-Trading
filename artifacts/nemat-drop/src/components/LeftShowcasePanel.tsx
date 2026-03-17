@@ -30,11 +30,11 @@ export default function LeftShowcasePanel() {
           }}
         />
         {/* Pack image — swap src for real product image */}
-        <div className="relative z-10 w-52 h-72 rounded-lg overflow-hidden shadow-[0_0_60px_rgba(34,211,238,0.12)]">
+        <div className="relative z-10 w-52 h-72 animate-bounce">
           <img
-            src="/tmnt-booster.png"
+            src="/tmnt-booster-nobg.png"
             alt="Teenage Mutant Ninja Turtles Magic: The Gathering Collector Booster Pack"
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain drop-shadow-[0_0_30px_rgba(34,211,238,0.4)]"
           />
         </div>
       </div>
