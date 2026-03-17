@@ -11,13 +11,10 @@ export default function LeftShowcasePanel() {
       border-r border-white/[0.04]
     ">
       {/* Top bar */}
-      <div className="px-8 pt-8 pb-4 flex items-center justify-between">
+      <div className="px-8 pt-8 pb-4">
         {/* Brand wordmark — swap NEMAT text here */}
         <span className="text-xs font-bold uppercase tracking-[0.4em] text-white">
           {product.brand}
-        </span>
-        <span className="text-[9px] uppercase tracking-[0.25em] text-gray-600">
-          Est. 2023
         </span>
       </div>
 
