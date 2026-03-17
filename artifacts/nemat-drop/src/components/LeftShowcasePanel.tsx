@@ -32,7 +32,7 @@ export default function LeftShowcasePanel() {
         {/* Pack image — swap src for real product image */}
         <div className="relative z-10 w-52 h-72 rounded-lg overflow-hidden shadow-[0_0_60px_rgba(34,211,238,0.12)]">
           <img
-            src="/tmnt-pack.png"
+            src="/tmnt-booster.png"
             alt="Teenage Mutant Ninja Turtles Magic: The Gathering Collector Booster Pack"
             className="w-full h-full object-cover"
           />
