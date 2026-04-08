@@ -1,5 +1,7 @@
 import ProductHeroSection from "./ProductHeroSection";
 import ProductSpecifications from "./ProductSpecifications";
+import PullProbabilityChart from "./PullProbabilityChart";
+import PossiblePullsGrid from "./PossiblePullsGrid";
 import PurchaseBar from "./PurchaseBar";
 
 export default function RightContentPanel() {
@@ -8,9 +10,11 @@ export default function RightContentPanel() {
       <div className="max-w-2xl mx-auto px-6 md:px-10 pt-10 pb-0">
         <ProductHeroSection />
         <ProductSpecifications />
+        <PullProbabilityChart />
+        <PossiblePullsGrid />
 
         {/* Footer spacing for sticky bar */}
-        <div className="h-20" />
+        <div className="h-24" />
       </div>
 
       {/* Sticky purchase bar */}
