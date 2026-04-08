@@ -92,8 +92,10 @@ export default function ProductHeroSection() {
     ?? (dbProduct?.tcgMarketPriceCents ? dbProduct.tcgMarketPriceCents / 100 : null)
     ?? staticProduct.tcgBestPrice;
 
-  // Savings calculated dynamically: how much cheaper are we vs current TCG best
-  const savings = tcgBest > nematPrice ? Math.round((1 - nematPrice / tcgBest) * 100) : 0;
+  // Savings calculated dynamically: how much cheaper are we vs current TCG market price
+  const savings = tcgBest > nematPrice
+    ? parseFloat(((1 - nematPrice / tcgBest) * 100).toFixed(2))
+    : 0;
 
   return (
     <section className="pb-10">
@@ -115,10 +117,10 @@ export default function ProductHeroSection() {
           {dbProduct?.tcgplayerUrl ? (
             <a href={dbProduct.tcgplayerUrl} target="_blank" rel="noopener noreferrer"
               className="text-[9px] uppercase tracking-[0.2em] text-gray-600 hover:text-cyan-600 transition-colors mb-1 underline underline-offset-2">
-              TCG Best ↗
+              TCG Market ↗
             </a>
           ) : (
-            <span className="text-[9px] uppercase tracking-[0.2em] text-gray-600 mb-1">TCG Best</span>
+            <span className="text-[9px] uppercase tracking-[0.2em] text-gray-600 mb-1">TCG Market</span>
           )}
           <span className="text-base text-gray-500 line-through">${tcgBest.toFixed(2)}</span>
           {tcgPrice && <span className="text-[8px] text-cyan-600 mt-0.5">Live</span>}
@@ -129,7 +131,7 @@ export default function ProductHeroSection() {
         </div>
         <div className="flex flex-col items-center py-4 px-3">
           <span className="text-[9px] uppercase tracking-[0.2em] text-gray-600 mb-1">You Save</span>
-          <span className="text-base font-semibold text-cyan-400">{savings}%</span>
+          <span className="text-base font-semibold text-cyan-400">{savings.toFixed(2)}%</span>
         </div>
       </div>
     </section>

@@ -214,8 +214,8 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
     const nemat = parseFloat(form.price);
     const tcg = parseFloat(tcgMarketPrice);
     if (nemat > 0 && tcg > 0 && tcg >= nemat) {
-      const computed = Math.round((1 - nemat / tcg) * 100);
-      setForm((f) => ({ ...f, discountPercent: String(computed) }));
+      const computed = ((1 - nemat / tcg) * 100).toFixed(2);
+      setForm((f) => ({ ...f, discountPercent: computed }));
     }
   }, [form.price, tcgMarketPrice]);
 
