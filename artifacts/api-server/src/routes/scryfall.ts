@@ -63,80 +63,19 @@ async function scrapeTCGPlayer(url: string): Promise<{ imageUrl: string | null; 
     "Accept": "application/json, text/plain, */*",
   };
 
+  // TCGPlayer is fully client-side rendered — HTML scraping cannot get live prices.
+  // The pricepoints API (mpapi) returns market price (weighted sales avg).
+  // Lowest listing price requires the official TCGPlayer Partner API.
   if (productId) {
-    // 2a. Pricepoints — has marketPrice only (not lowest listing), use as last resort
-    let marketPrice: string | null = null;
     try {
       const ppRes = await fetch(
         `https://mpapi.tcgplayer.com/v2/product/${productId}/pricepoints?mpfev=2`,
         { headers: mpHeaders }
       );
       if (ppRes.ok) {
-        marketPrice = findPriceInJson(await ppRes.json());
+        lowestPrice = findPriceInJson(await ppRes.json());
       }
     } catch {}
-
-    // 2b. Scrape the product page HTML to find the "As low as" lowest listing price
-    //     TCGPlayer server-renders this via Next.js so it's in the static HTML
-    try {
-      const pageUrl = `https://www.tcgplayer.com/product/${productId}/`;
-      const res = await fetch(pageUrl, {
-        headers: {
-          "User-Agent": mpHeaders["User-Agent"],
-          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-          "Accept-Language": "en-US,en;q=0.9",
-          "Referer": "https://www.google.com/",
-        },
-        redirect: "follow",
-      });
-      if (res.ok) {
-        const html = await res.text();
-
-        // Direct text match — "As low as $38.07" is rendered server-side
-        const asLowAs = html.match(/as\s+low\s+as\s+\$?([\d]+\.[\d]{2})/i);
-        if (asLowAs) { lowestPrice = asLowAs[1]; }
-
-        // JSON-LD AggregateOffer.lowPrice
-        if (!lowestPrice) {
-          const jsonLdBlocks = [...html.matchAll(/<script[^>]+type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi)];
-          for (const block of jsonLdBlocks) {
-            try {
-              const data = JSON.parse(block[1]);
-              const lp = (data as any)?.offers?.lowPrice ?? (data as any)?.offers?.[0]?.lowPrice;
-              if (lp) { lowestPrice = parseFloat(lp).toFixed(2); break; }
-            } catch {}
-          }
-        }
-
-        // __NEXT_DATA__ — search for lowestListingPrice or price in listing arrays
-        if (!lowestPrice) {
-          const nd = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/i);
-          if (nd) {
-            try {
-              const nextData = JSON.parse(nd[1]);
-              // Search specifically for lowestListingPrice before marketPrice
-              const deepFind = (obj: any, keys: string[], depth = 0): string | null => {
-                if (depth > 8 || !obj || typeof obj !== "object") return null;
-                for (const key of keys) {
-                  const v = obj[key];
-                  if (typeof v === "number" && v > 0) return v.toFixed(2);
-                  if (typeof v === "string" && parseFloat(v) > 0) return parseFloat(v).toFixed(2);
-                }
-                for (const val of Object.values(obj as object)) {
-                  const found = deepFind(val, keys, depth + 1);
-                  if (found) return found;
-                }
-                return null;
-              };
-              lowestPrice = deepFind(nextData, ["lowestListingPrice", "directLowPrice", "lowPrice"]);
-            } catch {}
-          }
-        }
-      }
-    } catch {}
-
-    // Fall back to market price if HTML scrape didn't work
-    if (!lowestPrice) lowestPrice = marketPrice;
   }
 
   return { imageUrl, lowestPrice };
