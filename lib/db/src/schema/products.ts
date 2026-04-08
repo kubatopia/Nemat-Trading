@@ -12,6 +12,7 @@ export const productsTable = pgTable("products", {
   active: boolean("active").notNull().default(true),
   specs: text("specs").notNull().default("[]"), // JSON string
   contents: text("contents").notNull().default("[]"), // JSON string
+  expiresAt: timestamp("expires_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

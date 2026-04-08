@@ -25,7 +25,7 @@ function requireAdmin(req: any, res: any, next: any) {
 
 // Admin: create product
 router.post("/admin/products", requireAdmin, async (req, res) => {
-  const { title, subtitle, price, imageUrl, stock, specs, contents } = req.body;
+  const { title, subtitle, price, imageUrl, stock, specs, contents, expiresAt } = req.body;
   const [product] = await db
     .insert(productsTable)
     .values({
@@ -36,6 +36,7 @@ router.post("/admin/products", requireAdmin, async (req, res) => {
       stock: stock ?? 0,
       specs: JSON.stringify(specs ?? []),
       contents: JSON.stringify(contents ?? []),
+      expiresAt: expiresAt ? new Date(expiresAt) : null,
       active: true,
     })
     .returning();
@@ -45,7 +46,7 @@ router.post("/admin/products", requireAdmin, async (req, res) => {
 // Admin: update product
 router.patch("/admin/products/:id", requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
-  const { title, subtitle, price, imageUrl, stock, active, specs, contents } = req.body;
+  const { title, subtitle, price, imageUrl, stock, active, specs, contents, expiresAt } = req.body;
   const updates: Record<string, any> = {};
   if (title !== undefined) updates.title = title;
   if (subtitle !== undefined) updates.subtitle = subtitle;
@@ -55,6 +56,7 @@ router.patch("/admin/products/:id", requireAdmin, async (req, res) => {
   if (active !== undefined) updates.active = active;
   if (specs !== undefined) updates.specs = JSON.stringify(specs);
   if (contents !== undefined) updates.contents = JSON.stringify(contents);
+  if (expiresAt !== undefined) updates.expiresAt = expiresAt ? new Date(expiresAt) : null;
 
   const [product] = await db
     .update(productsTable)
@@ -62,6 +64,12 @@ router.patch("/admin/products/:id", requireAdmin, async (req, res) => {
     .where(eq(productsTable.id, id))
     .returning();
   res.json(product);
+});
+
+// Admin: list all products (including inactive)
+router.get("/admin/products", requireAdmin, async (_req, res) => {
+  const products = await db.select().from(productsTable);
+  res.json(products);
 });
 
 // Admin: delete product

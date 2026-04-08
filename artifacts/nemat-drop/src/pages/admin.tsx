@@ -11,10 +11,16 @@ type Product = {
   imageUrl: string;
   stock: number;
   active: boolean;
+  expiresAt: string | null;
 };
 
 function priceDisplay(cents: number) {
   return `$${(cents / 100).toFixed(2)}`;
+}
+
+function toDatetimeLocal(iso: string | null) {
+  if (!iso) return "";
+  return new Date(iso).toISOString().slice(0, 16);
 }
 
 export default function AdminPage() {
@@ -29,13 +35,16 @@ export default function AdminPage() {
     price: "",
     imageUrl: "",
     stock: "",
+    expiresAt: "",
   });
   const [editingId, setEditingId] = useState<number | null>(null);
 
   const adminKey = ADMIN_PASSWORD;
 
   async function fetchProducts() {
-    const res = await fetch(`${API_URL}/api/products`);
+    const res = await fetch(`${API_URL}/api/admin/products`, {
+      headers: { "x-admin-key": adminKey },
+    });
     const data = await res.json();
     setProducts(data);
   }
@@ -61,12 +70,13 @@ export default function AdminPage() {
       price: (product.price / 100).toFixed(2),
       imageUrl: product.imageUrl,
       stock: String(product.stock),
+      expiresAt: toDatetimeLocal(product.expiresAt),
     });
   }
 
   function resetForm() {
     setEditingId(null);
-    setForm({ title: "", subtitle: "", price: "", imageUrl: "", stock: "" });
+    setForm({ title: "", subtitle: "", price: "", imageUrl: "", stock: "", expiresAt: "" });
     setError(null);
   }
 
@@ -81,6 +91,7 @@ export default function AdminPage() {
       price: Math.round(parseFloat(form.price) * 100),
       imageUrl: form.imageUrl,
       stock: parseInt(form.stock, 10),
+      expiresAt: form.expiresAt ? new Date(form.expiresAt).toISOString() : null,
     };
 
     try {
@@ -217,6 +228,17 @@ export default function AdminPage() {
               onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
               className="rounded border border-white/10 bg-black px-4 py-3 text-sm focus:outline-none focus:border-cyan-400/40"
             />
+            <div>
+              <label className="text-[10px] uppercase tracking-[0.2em] text-gray-500 block mb-1.5">
+                Deal Expires At (optional)
+              </label>
+              <input
+                type="datetime-local"
+                value={form.expiresAt}
+                onChange={(e) => setForm({ ...form, expiresAt: e.target.value })}
+                className="w-full rounded border border-white/10 bg-black px-4 py-3 text-sm focus:outline-none focus:border-cyan-400/40 text-white [color-scheme:dark]"
+              />
+            </div>
 
             {error && <p className="text-sm text-red-400">{error}</p>}
 
@@ -259,6 +281,11 @@ export default function AdminPage() {
                   <div className="text-sm font-medium text-white">{p.title}</div>
                   <div className="text-xs text-gray-500">
                     {priceDisplay(p.price)} · {p.stock} in stock
+                    {p.expiresAt && (
+                      <span className="ml-2 text-cyan-600">
+                        · expires {new Date(p.expiresAt).toLocaleDateString()}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>

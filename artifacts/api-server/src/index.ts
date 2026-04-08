@@ -27,8 +27,10 @@ async function migrate() {
       active BOOLEAN NOT NULL DEFAULT true,
       specs TEXT NOT NULL DEFAULT '[]',
       contents TEXT NOT NULL DEFAULT '[]',
+      expires_at TIMESTAMP,
       created_at TIMESTAMP NOT NULL DEFAULT NOW()
-    )
+    );
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP
   `);
   console.log("Database ready");
 }
