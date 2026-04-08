@@ -152,10 +152,27 @@ router.post("/lookup/tcgplayer", async (req, res) => {
     if (setsRes.ok) {
       const setsData = await setsRes.json() as { data: any[] };
       const needle = setName.toLowerCase();
-      const set = setsData.data.find((s: any) =>
-        s.name.toLowerCase().includes(needle) ||
-        needle.includes(s.name.toLowerCase().replace(/universes beyond: /i, ""))
-      );
+
+      // Exclude supplemental sets that aren't the main product
+      const EXCLUDED_TYPES = new Set(["token", "memorabilia", "promo"]);
+      const candidates = setsData.data.filter((s: any) => {
+        if (EXCLUDED_TYPES.has(s.set_type)) return false;
+        const n = s.name.toLowerCase().replace(/^universes beyond: /i, "");
+        return n.includes(needle) || needle.includes(n);
+      });
+
+      // Prefer sets whose name most closely matches (shortest = most specific match)
+      candidates.sort((a: any, b: any) => {
+        const aName = a.name.toLowerCase().replace(/^universes beyond: /i, "");
+        const bName = b.name.toLowerCase().replace(/^universes beyond: /i, "");
+        // Exact match wins
+        if (aName === needle && bName !== needle) return -1;
+        if (bName === needle && aName !== needle) return 1;
+        // Shorter name = less likely to be a supplemental/sub-set
+        return aName.length - bName.length;
+      });
+
+      const set = candidates[0];
 
       if (set) {
         // Fetch top cards in this set by USD price
