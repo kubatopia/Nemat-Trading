@@ -189,14 +189,22 @@ router.get("/tcgplayer/debug", async (req, res) => {
     const r = await fetch(`https://mpapi.tcgplayer.com/v2/product/${id}/pricepoints?mpfev=2`, { headers });
     results.pricepoints = { status: r.status, body: await r.json() };
   } catch (e: any) { results.pricepoints = { error: e.message }; }
+  // Check what the HTML page returns (Cloudflare block check)
   try {
-    const r = await fetch(`https://mpapi.tcgplayer.com/v2/product/${id}/listings?condition=Near+Mint&printing=Normal&language=English&iDisplayStart=0&iDisplayLength=5`, { headers });
-    results.listings = { status: r.status, body: await r.json() };
-  } catch (e: any) { results.listings = { error: e.message }; }
-  try {
-    const r = await fetch(`https://mpapi.tcgplayer.com/v2/product/${id}/listings?iDisplayStart=0&iDisplayLength=5`, { headers });
-    results.listingsNoFilter = { status: r.status, body: await r.json() };
-  } catch (e: any) { results.listingsNoFilter = { error: e.message }; }
+    const r = await fetch(`https://www.tcgplayer.com/product/${id}/`, {
+      headers: { ...headers, "Accept": "text/html,application/xhtml+xml", "Referer": "https://www.google.com/" },
+      redirect: "follow",
+    });
+    const html = await r.text();
+    const asLowAs = html.match(/as\s+low\s+as\s+\$?([\d]+\.[\d]{2})/i);
+    const cfBlocked = html.includes("Just a moment") || html.includes("cf-browser-verification") || html.includes("challenge-platform");
+    results.htmlScrape = {
+      status: r.status,
+      cloudflareBlocked: cfBlocked,
+      asLowAsMatch: asLowAs?.[1] ?? null,
+      htmlSnippet: html.slice(0, 500),
+    };
+  } catch (e: any) { results.htmlScrape = { error: e.message }; }
   res.json(results);
 });
 
