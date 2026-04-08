@@ -1,6 +1,50 @@
+import { useEffect, useState } from "react";
 import { product } from "@/data/product";
+import { useActiveProduct } from "@/hooks/useActiveProduct";
+
+function getTimeLeft(iso: string) {
+  const diff = Math.max(0, new Date(iso).getTime() - Date.now());
+  const h = Math.floor(diff / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  const s = Math.floor((diff % 60000) / 1000);
+  return { h, m, s, done: diff === 0 };
+}
+function pad(n: number) { return String(n).padStart(2, "0"); }
+
+function SideCountdown({ expiresAt }: { expiresAt: string }) {
+  const [time, setTime] = useState(() => getTimeLeft(expiresAt));
+  useEffect(() => {
+    const id = setInterval(() => setTime(getTimeLeft(expiresAt)), 1000);
+    return () => clearInterval(id);
+  }, [expiresAt]);
+
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <span className="text-[10px] uppercase tracking-[0.25em] text-gray-500 mb-1">
+        {time.done ? "Deal Expired" : "Deal Expires In"}
+      </span>
+      {!time.done && (
+        <div className="flex items-end gap-0.5">
+          {[{ v: time.h, l: "HRS" }, { v: time.m, l: "MIN" }, { v: time.s, l: "SEC" }].map((unit, i) => (
+            <div key={unit.l} className="flex items-end">
+              <div className="flex flex-col items-center">
+                <span className="text-4xl md:text-5xl font-mono font-bold text-cyan-400 tracking-widest tabular-nums">
+                  {pad(unit.v)}
+                </span>
+                <span className="text-[10px] uppercase tracking-[0.2em] text-gray-500 mt-1">{unit.l}</span>
+              </div>
+              {i < 2 && <span className="text-3xl md:text-4xl font-mono text-cyan-400/60 mx-1 mb-4">:</span>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function LeftShowcasePanel() {
+  const dbProduct = useActiveProduct();
+
   return (
     <aside className="
       w-full md:w-[420px] md:min-w-[380px] md:max-w-[440px]
@@ -36,11 +80,15 @@ export default function LeftShowcasePanel() {
         </div>
       </div>
 
-      {/* Bottom brand label */}
-      <div className="px-8 pb-8 flex flex-col items-center gap-2">
-        <span className="text-[10px] uppercase tracking-[0.3em] text-gray-600">
-          Secure checkout powered by Stripe
-        </span>
+      {/* Bottom: countdown or Stripe label */}
+      <div className="px-8 pb-8 flex flex-col items-center gap-4">
+        {dbProduct?.expiresAt ? (
+          <SideCountdown expiresAt={dbProduct.expiresAt} />
+        ) : (
+          <span className="text-[10px] uppercase tracking-[0.3em] text-gray-600">
+            Secure checkout powered by Stripe
+          </span>
+        )}
       </div>
     </aside>
   );
