@@ -30,8 +30,28 @@ async function migrate() {
       expires_at TIMESTAMP,
       created_at TIMESTAMP NOT NULL DEFAULT NOW()
     );
-    ALTER TABLE products ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP;
   `);
+
+  // Seed the default product if the table is empty
+  const { rows } = await pool.query("SELECT COUNT(*) FROM products");
+  if (Number(rows[0].count) === 0) {
+    await pool.query(`
+      INSERT INTO products (title, subtitle, price, image_url, stock, active, specs, contents)
+      VALUES (
+        'Teenage Mutant Ninja Turtles',
+        'Collector Booster Pack',
+        3200,
+        '/tmnt-booster-nobg.png',
+        50,
+        true,
+        '[{"label":"SET","value":"Teenage Mutant Ninja Turtles"},{"label":"RELEASE","value":"2025"},{"label":"PACKS / BOX","value":"1"},{"label":"CARDS / PACK","value":"15"}]',
+        '["15 Magic: The Gathering cards","0–3 surge foil cards","9–12 traditional foil cards","5 cards of rarity rare or higher","3–4 uncommon cards","5–6 common cards","1 land card"]'
+      )
+    `);
+    console.log("Default product seeded");
+  }
+
   console.log("Database ready");
 }
 
