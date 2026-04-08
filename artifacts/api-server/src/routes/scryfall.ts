@@ -19,72 +19,99 @@ function dedupeWords(s: string): string {
   return s;
 }
 
+/** Recursively search a JSON object for a positive numeric price value at known keys */
+function findPriceInJson(obj: unknown, depth = 0): string | null {
+  if (depth > 6 || !obj || typeof obj !== "object") return null;
+  const PRICE_KEYS = ["marketPrice", "lowestPrice", "lowPrice", "lowestListingPrice", "directLowPrice"];
+  for (const key of PRICE_KEYS) {
+    const val = (obj as any)[key];
+    const n = typeof val === "number" ? val : parseFloat(val);
+    if (!isNaN(n) && n > 0) return n.toFixed(2);
+  }
+  for (const value of Object.values(obj as object)) {
+    const found = findPriceInJson(value, depth + 1);
+    if (found) return found;
+  }
+  return null;
+}
+
 /**
- * Fetch a TCGPlayer product page and extract:
- *  - imageUrl  — from og:image meta tag (reliable)
- *  - lowestPrice — from JSON-LD structured data or __NEXT_DATA__ (best-effort)
+ * Get product image + lowest price from a TCGPlayer URL.
+ *
+ * Strategy:
+ *  1. Image — construct directly from product ID via TCGPlayer's CDN (no HTTP fetch needed)
+ *  2. Price — try mpapi.tcgplayer.com marketplace endpoint (often public)
+ *  3. Price fallback — scrape the product page and search __NEXT_DATA__ / JSON-LD
  */
 async function scrapeTCGPlayer(url: string): Promise<{ imageUrl: string | null; lowestPrice: string | null }> {
-  try {
-    const res = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Cache-Control": "no-cache",
-      },
-    });
-    if (!res.ok) return { imageUrl: null, lowestPrice: null };
-    const html = await res.text();
+  // Extract numeric product ID from URL  e.g. /product/657851/...
+  const productIdMatch = url.match(/\/product\/(\d+)\//);
+  const productId = productIdMatch?.[1] ?? null;
 
-    // Product image — og:image is set server-side by TCGPlayer, reliable
-    const ogImg = html.match(/<meta[^>]+property="og:image"[^>]+content="([^"]+)"/i)
-      ?? html.match(/<meta[^>]+content="([^"]+)"[^>]+property="og:image"/i);
-    const imageUrl = ogImg?.[1] ?? null;
+  // 1. Construct image URL from TCGPlayer CDN (no scraping, no Cloudflare)
+  const imageUrl = productId
+    ? `https://product-images.tcgplayer.com/fit-in/437x437/${productId}.jpg`
+    : null;
 
-    let lowestPrice: string | null = null;
+  let lowestPrice: string | null = null;
 
-    // JSON-LD structured data (Product offers)
-    const jsonLdBlocks = [...html.matchAll(/<script[^>]+type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi)];
-    for (const block of jsonLdBlocks) {
-      try {
-        const data = JSON.parse(block[1]);
-        const items: any[] = Array.isArray(data) ? data : [data];
-        for (const item of items) {
-          const offers = item?.offers;
-          if (!offers) continue;
-          const price = offers.lowPrice ?? offers.price
-            ?? (Array.isArray(offers) ? offers[0]?.price : null);
-          if (price != null) { lowestPrice = String(price); break; }
+  // 2. Try TCGPlayer marketplace API (semi-public, used by their own frontend)
+  if (productId) {
+    try {
+      const mpRes = await fetch(
+        `https://mpapi.tcgplayer.com/v2/product/${productId}/pricepoints?mpfev=2`,
+        {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+            "Referer": "https://www.tcgplayer.com/",
+            "Origin": "https://www.tcgplayer.com",
+          },
         }
-        if (lowestPrice) break;
-      } catch {}
-    }
-
-    // __NEXT_DATA__ fallback — TCGPlayer is Next.js, embeds page state here
-    if (!lowestPrice) {
-      const nextDataMatch = html.match(/<script id="__NEXT_DATA__"[^>]*type="application\/json"[^>]*>([\s\S]*?)<\/script>/i)
-        ?? html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/i);
-      if (nextDataMatch) {
-        try {
-          const nextData = JSON.parse(nextDataMatch[1]);
-          const pp = nextData?.props?.pageProps;
-          // Try known paths in TCGPlayer's data shape
-          const candidate =
-            pp?.product?.marketPrice ??
-            pp?.marketPrice ??
-            pp?.listings?.[0]?.price ??
-            pp?.lowestListing?.price ??
-            pp?.product?.lowestSalePrice;
-          if (candidate != null) lowestPrice = String(candidate);
-        } catch {}
+      );
+      if (mpRes.ok) {
+        const mpData = await mpRes.json();
+        lowestPrice = findPriceInJson(mpData);
       }
-    }
-
-    return { imageUrl, lowestPrice };
-  } catch {
-    return { imageUrl: null, lowestPrice: null };
+    } catch {}
   }
+
+  // 3. HTML scrape fallback — works when Cloudflare doesn't intercept
+  if (!lowestPrice) {
+    try {
+      const res = await fetch(url, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "Accept-Language": "en-US,en;q=0.9",
+        },
+      });
+      if (res.ok) {
+        const html = await res.text();
+
+        // JSON-LD structured data
+        const jsonLdBlocks = [...html.matchAll(/<script[^>]+type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi)];
+        for (const block of jsonLdBlocks) {
+          try {
+            const data = JSON.parse(block[1]);
+            const found = findPriceInJson(data);
+            if (found) { lowestPrice = found; break; }
+          } catch {}
+        }
+
+        // __NEXT_DATA__ — TCGPlayer's Next.js embeds full page state here
+        if (!lowestPrice) {
+          const nd = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/i);
+          if (nd) {
+            try {
+              lowestPrice = findPriceInJson(JSON.parse(nd[1]));
+            } catch {}
+          }
+        }
+      }
+    } catch {}
+  }
+
+  return { imageUrl, lowestPrice };
 }
 
 // ─── Routes ───────────────────────────────────────────────────────────────────

@@ -235,12 +235,12 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
       const data = await res.json();
       if (!res.ok) { setLookupError(data.error ?? "Lookup failed"); return; }
       setLookupResult(data as LookupResult);
-      // Auto-fill title, scryfallId, and TCG market price from result
+      // Auto-fill from result — always update image and price from lookup
       setForm((f) => ({
         ...f,
         title: f.title || data.suggestedTitle || f.title,
         scryfallId: data.scryfallId ?? f.scryfallId,
-        imageUrl: f.imageUrl || data.imageUrl || f.imageUrl,
+        imageUrl: data.imageUrl || f.imageUrl,  // lookup wins for image
       }));
       if (data.usd) setTcgMarketPrice(data.usd);
     } catch (err: any) {
