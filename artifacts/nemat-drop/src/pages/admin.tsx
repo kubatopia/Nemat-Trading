@@ -12,6 +12,8 @@ type Product = {
   stock: number;
   active: boolean;
   expiresAt: string | null;
+  scryfallId: string | null;
+  discountPercent: number;
 };
 
 function priceDisplay(cents: number) {
@@ -36,7 +38,10 @@ export default function AdminPage() {
     imageUrl: "",
     stock: "",
     expiresAt: "",
+    scryfallId: "",
+    discountPercent: "15",
   });
+  const [tcgPreview, setTcgPreview] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
 
   const adminKey = ADMIN_PASSWORD;
@@ -64,6 +69,7 @@ export default function AdminPage() {
 
   function startEdit(product: Product) {
     setEditingId(product.id);
+    setTcgPreview(null);
     setForm({
       title: product.title,
       subtitle: product.subtitle,
@@ -71,13 +77,27 @@ export default function AdminPage() {
       imageUrl: product.imageUrl,
       stock: String(product.stock),
       expiresAt: toDatetimeLocal(product.expiresAt),
+      scryfallId: product.scryfallId ?? "",
+      discountPercent: String(product.discountPercent ?? 15),
     });
   }
 
   function resetForm() {
     setEditingId(null);
-    setForm({ title: "", subtitle: "", price: "", imageUrl: "", stock: "", expiresAt: "" });
+    setTcgPreview(null);
+    setForm({ title: "", subtitle: "", price: "", imageUrl: "", stock: "", expiresAt: "", scryfallId: "", discountPercent: "15" });
     setError(null);
+  }
+
+  async function fetchTcgPreview(scryfallId: string) {
+    if (!scryfallId.trim()) { setTcgPreview(null); return; }
+    try {
+      const res = await fetch(`${API_URL}/api/scryfall/${scryfallId.trim()}/price`);
+      const data = await res.json();
+      setTcgPreview(data.usd ? `$${data.usd}` : "Price not found");
+    } catch {
+      setTcgPreview("Could not fetch");
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -92,6 +112,8 @@ export default function AdminPage() {
       imageUrl: form.imageUrl,
       stock: parseInt(form.stock, 10),
       expiresAt: form.expiresAt ? new Date(form.expiresAt).toISOString() : null,
+      scryfallId: form.scryfallId,
+      discountPercent: parseInt(form.discountPercent, 10) || 15,
     };
 
     try {
@@ -228,6 +250,47 @@ export default function AdminPage() {
               onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
               className="rounded border border-white/10 bg-black px-4 py-3 text-sm focus:outline-none focus:border-cyan-400/40"
             />
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label className="text-[10px] uppercase tracking-[0.2em] text-gray-500 block mb-1.5">
+                  Scryfall Card ID <span className="text-gray-600 normal-case tracking-normal">(for live TCG price)</span>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    placeholder="e.g. d6eaae35-d513-..."
+                    value={form.scryfallId}
+                    onChange={(e) => { setForm({ ...form, scryfallId: e.target.value }); setTcgPreview(null); }}
+                    className="flex-1 rounded border border-white/10 bg-black px-4 py-3 text-sm focus:outline-none focus:border-cyan-400/40"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fetchTcgPreview(form.scryfallId)}
+                    className="rounded border border-white/10 px-4 py-2 text-xs text-gray-400 hover:text-white transition-colors whitespace-nowrap"
+                  >
+                    Test
+                  </button>
+                </div>
+                {tcgPreview && (
+                  <p className="text-xs mt-1.5 text-cyan-400">TCG Best: {tcgPreview}</p>
+                )}
+              </div>
+              <div>
+                <label className="text-[10px] uppercase tracking-[0.2em] text-gray-500 block mb-1.5">
+                  Nemat Discount %
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={form.discountPercent}
+                    onChange={(e) => setForm({ ...form, discountPercent: e.target.value })}
+                    className="w-full rounded border border-white/10 bg-black px-4 py-3 text-sm focus:outline-none focus:border-cyan-400/40"
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm">%</span>
+                </div>
+              </div>
+            </div>
             <div>
               <label className="text-[10px] uppercase tracking-[0.2em] text-gray-500 block mb-1.5">
                 Deal Expires At (optional)

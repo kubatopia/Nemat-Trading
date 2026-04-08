@@ -31,6 +31,8 @@ async function migrate() {
       created_at TIMESTAMP NOT NULL DEFAULT NOW()
     );
     ALTER TABLE products ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP;
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS scryfall_id TEXT DEFAULT '';
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS discount_percent INTEGER NOT NULL DEFAULT 15;
   `);
 
   // Seed the default product if the table is empty
