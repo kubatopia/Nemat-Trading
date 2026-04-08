@@ -47,20 +47,27 @@ function ProductList({ adminKey, onEdit, onNew }: {
 }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
-    const res = await fetch(`${API_URL}/api/admin/products`, { headers: { "x-admin-key": adminKey } });
-    const data = await res.json();
-    // Sort by expiresAt (null last), then by createdAt
-    const sorted = [...data].sort((a: Product, b: Product) => {
-      if (a.expiresAt && b.expiresAt) return new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime();
-      if (a.expiresAt) return -1;
-      if (b.expiresAt) return 1;
-      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-    });
-    setProducts(sorted);
-    setLoading(false);
+    setLoadError(null);
+    try {
+      const res = await fetch(`${API_URL}/api/admin/products`, { headers: { "x-admin-key": adminKey } });
+      if (!res.ok) throw new Error(`API returned ${res.status}`);
+      const data = await res.json();
+      const sorted = [...data].sort((a: Product, b: Product) => {
+        if (a.expiresAt && b.expiresAt) return new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime();
+        if (a.expiresAt) return -1;
+        if (b.expiresAt) return 1;
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      });
+      setProducts(sorted);
+    } catch (err: any) {
+      setLoadError(err.message ?? "Failed to load products");
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => { load(); }, []);
@@ -84,6 +91,14 @@ function ProductList({ adminKey, onEdit, onNew }: {
       </div>
 
       {loading && <p className="text-gray-600 text-sm text-center py-12">Loading...</p>}
+      {loadError && (
+        <div className="text-center py-12 border border-red-400/20 rounded">
+          <p className="text-red-400 text-sm mb-2">Could not connect to API</p>
+          <p className="text-gray-600 text-xs font-mono">{API_URL}/api/admin/products</p>
+          <p className="text-gray-600 text-xs mt-1">{loadError}</p>
+          <button onClick={load} className="mt-4 text-xs text-cyan-400 hover:text-cyan-300 transition-colors">Retry</button>
+        </div>
+      )}
 
       {!loading && products.length === 0 && (
         <div className="text-center py-16 border border-white/[0.06] rounded">

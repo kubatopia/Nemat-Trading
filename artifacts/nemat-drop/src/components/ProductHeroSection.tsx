@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { product as staticProduct } from "@/data/product";
+import { useActiveProduct } from "@/hooks/useActiveProduct";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "";
 
@@ -10,7 +11,6 @@ function getTimeLeft(iso: string) {
   const s = Math.floor((diff % 60000) / 1000);
   return { h, m, s, done: diff === 0 };
 }
-
 function pad(n: number) { return String(n).padStart(2, "0"); }
 
 function DealCountdown({ expiresAt }: { expiresAt: string }) {
@@ -20,13 +20,11 @@ function DealCountdown({ expiresAt }: { expiresAt: string }) {
     return () => clearInterval(id);
   }, [expiresAt]);
 
-  if (time.done) {
-    return (
-      <div className="border border-white/[0.06] rounded bg-white/[0.02] px-6 py-4 inline-flex items-center mb-8">
-        <span className="text-[10px] uppercase tracking-[0.25em] text-gray-500">Deal Expired</span>
-      </div>
-    );
-  }
+  if (time.done) return (
+    <div className="border border-white/[0.06] rounded bg-white/[0.02] px-6 py-4 inline-flex items-center mb-8">
+      <span className="text-[10px] uppercase tracking-[0.25em] text-gray-500">Deal Expired</span>
+    </div>
+  );
 
   return (
     <div className="border border-white/[0.06] rounded bg-white/[0.02] px-6 py-4 inline-flex flex-col items-center mb-8">
@@ -47,31 +45,23 @@ function DealCountdown({ expiresAt }: { expiresAt: string }) {
 }
 
 export default function ProductHeroSection() {
-  const [expiresAt, setExpiresAt] = useState<string | null>(null);
+  const dbProduct = useActiveProduct();
   const [tcgPrice, setTcgPrice] = useState<number | null>(null);
-  const [discountPercent, setDiscountPercent] = useState<number>(staticProduct.savingsPercent);
 
   useEffect(() => {
-    if (!API_URL) return;
-    fetch(`${API_URL}/api/products`)
+    if (!dbProduct?.scryfallId || !API_URL) return;
+    fetch(`${API_URL}/api/scryfall/${dbProduct.scryfallId}/price`)
       .then((r) => r.json())
-      .then(async (data) => {
-        if (!Array.isArray(data) || !data[0]) return;
-        const p = data[0];
-        if (p.expiresAt) setExpiresAt(p.expiresAt);
-        if (p.discountPercent) setDiscountPercent(p.discountPercent);
-        if (p.scryfallId) {
-          const priceRes = await fetch(`${API_URL}/api/scryfall/${p.scryfallId}/price`);
-          const priceData = await priceRes.json();
-          if (priceData.usd) setTcgPrice(parseFloat(priceData.usd));
-        }
-      })
+      .then((d) => { if (d.usd) setTcgPrice(parseFloat(d.usd)); })
       .catch(() => {});
-  }, []);
+  }, [dbProduct?.scryfallId]);
 
+  const title = dbProduct?.title ?? staticProduct.title;
+  const subtitle = dbProduct?.subtitle ?? staticProduct.subtitle;
+  const discountPercent = dbProduct?.discountPercent ?? staticProduct.savingsPercent;
   const tcgBest = tcgPrice ?? staticProduct.tcgBestPrice;
-  const nematPrice = tcgPrice
-    ? parseFloat((tcgPrice * (1 - discountPercent / 100)).toFixed(2))
+  const nematPrice = dbProduct
+    ? (tcgPrice ? parseFloat((tcgPrice * (1 - discountPercent / 100)).toFixed(2)) : dbProduct.price / 100)
     : staticProduct.dropPrice;
   const savings = Math.round((1 - nematPrice / tcgBest) * 100);
 
@@ -82,19 +72,13 @@ export default function ProductHeroSection() {
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-60"></span>
           <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400"></span>
         </span>
-        <span className="text-[10px] uppercase tracking-[0.3em] text-gray-500">
-          {staticProduct.status}
-        </span>
+        <span className="text-[10px] uppercase tracking-[0.3em] text-gray-500">{staticProduct.status}</span>
       </div>
 
-      <h1 className="text-3xl md:text-4xl font-bold text-white leading-tight tracking-tight mb-1">
-        {staticProduct.title}
-      </h1>
-      <p className="text-base text-gray-500 uppercase tracking-[0.2em] mb-8">
-        {staticProduct.subtitle}
-      </p>
+      <h1 className="text-3xl md:text-4xl font-bold text-white leading-tight tracking-tight mb-1">{title}</h1>
+      <p className="text-base text-gray-500 uppercase tracking-[0.2em] mb-8">{subtitle}</p>
 
-      {expiresAt && <DealCountdown expiresAt={expiresAt} />}
+      {dbProduct?.expiresAt && <DealCountdown expiresAt={dbProduct.expiresAt} />}
 
       <div className="grid grid-cols-3 gap-0 border border-white/[0.06] rounded overflow-hidden mb-2">
         <div className="flex flex-col items-center py-4 px-3 border-r border-white/[0.06]">

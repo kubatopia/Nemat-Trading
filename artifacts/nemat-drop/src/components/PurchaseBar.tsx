@@ -1,13 +1,18 @@
 import { useState } from "react";
 import QuantitySelector from "./QuantitySelector";
-import { product } from "@/data/product";
+import { product as staticProduct } from "@/data/product";
+import { useActiveProduct } from "@/hooks/useActiveProduct";
 
 export default function PurchaseBar() {
   const [quantity, setQuantity] = useState(1);
-  const total = (product.dropPrice * quantity).toFixed(2);
+  const dbProduct = useActiveProduct();
+
+  const pricePerUnit = dbProduct ? dbProduct.price / 100 : staticProduct.dropPrice;
+  const productId = dbProduct?.id ?? 1;
+  const total = (pricePerUnit * quantity).toFixed(2);
 
   const handleAcquire = () => {
-    window.location.href = `/checkout?qty=${quantity}`;
+    window.location.href = `/checkout?qty=${quantity}&pid=${productId}`;
   };
 
   return (

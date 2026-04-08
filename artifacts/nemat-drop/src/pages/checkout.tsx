@@ -11,10 +11,14 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const qty = useMemo(() => {
+  const { qty, productId } = useMemo(() => {
     const params = new URLSearchParams(window.location.search);
-    const parsed = Number(params.get("qty") ?? "1");
-    return Number.isFinite(parsed) && parsed > 0 ? Math.min(parsed, 99) : 1;
+    const parsedQty = Number(params.get("qty") ?? "1");
+    const parsedPid = Number(params.get("pid") ?? "1");
+    return {
+      qty: Number.isFinite(parsedQty) && parsedQty > 0 ? Math.min(parsedQty, 99) : 1,
+      productId: Number.isFinite(parsedPid) && parsedPid > 0 ? parsedPid : 1,
+    };
   }, []);
 
   const totalCents = product.dropPrice * 100 * qty;
@@ -26,7 +30,7 @@ export default function CheckoutPage() {
       const res = await fetch(`${API_URL}/api/checkout`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId: 1, quantity: qty }),
+        body: JSON.stringify({ productId, quantity: qty }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Checkout failed");
