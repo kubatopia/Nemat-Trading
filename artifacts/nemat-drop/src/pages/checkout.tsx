@@ -1,18 +1,41 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { product } from "@/data/product";
 
-function money(value: number) {
-  return `$${value.toFixed(2)}`;
+const API_URL = import.meta.env.VITE_API_URL ?? "";
+
+function money(cents: number) {
+  return `$${(cents / 100).toFixed(2)}`;
 }
 
 export default function CheckoutPage() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const qty = useMemo(() => {
     const params = new URLSearchParams(window.location.search);
     const parsed = Number(params.get("qty") ?? "1");
     return Number.isFinite(parsed) && parsed > 0 ? Math.min(parsed, 99) : 1;
   }, []);
 
-  const total = product.dropPrice * qty;
+  const totalCents = product.dropPrice * 100 * qty;
+
+  const handlePay = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_URL}/api/checkout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: 1, quantity: qty }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Checkout failed");
+      window.location.href = data.url;
+    } catch (err: any) {
+      setError(err.message ?? "Something went wrong");
+      setLoading(false);
+    }
+  };
 
   return (
     <main className="min-h-screen bg-black text-white px-6 py-10">
@@ -30,21 +53,26 @@ export default function CheckoutPage() {
             </div>
             <div className="text-right">
               <div className="text-xs uppercase tracking-[0.25em] text-gray-500">Total</div>
-              <div className="text-2xl font-bold text-cyan-400">{money(total)}</div>
+              <div className="text-2xl font-bold text-cyan-400">{money(totalCents)}</div>
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <input className="rounded border border-white/10 bg-black px-4 py-3 text-sm" placeholder="Email address" />
-            <input className="rounded border border-white/10 bg-black px-4 py-3 text-sm" placeholder="Shipping country" />
-          </div>
+          {error && (
+            <p className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded px-4 py-3">
+              {error}
+            </p>
+          )}
 
-          <button className="rounded bg-cyan-400 px-5 py-3 text-xs font-bold uppercase tracking-[0.25em] text-black hover:bg-cyan-300 transition-colors">
-            Pay securely with Stripe
+          <button
+            onClick={handlePay}
+            disabled={loading}
+            className="rounded bg-cyan-400 px-5 py-3 text-xs font-bold uppercase tracking-[0.25em] text-black hover:bg-cyan-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? "Redirecting..." : "Pay securely with Stripe"}
           </button>
 
           <p className="text-xs text-gray-500">
-            This is an internal secure checkout screen. To accept live payments, connect a Stripe Checkout session on the server.
+            You'll be redirected to Stripe's secure payment page.
           </p>
         </div>
       </div>

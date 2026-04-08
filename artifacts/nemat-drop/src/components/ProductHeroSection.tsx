@@ -1,5 +1,3 @@
-
-import CountdownTimer from "./CountdownTimer";
 import { product } from "@/data/product";
 
 export default function ProductHeroSection() {
@@ -16,7 +14,7 @@ export default function ProductHeroSection() {
         </span>
       </div>
 
-      {/* Product title — swap product name here */}
+      {/* Product title */}
       <h1 className="text-3xl md:text-4xl font-bold text-white leading-tight tracking-tight mb-1">
         {product.title}
       </h1>
@@ -24,28 +22,16 @@ export default function ProductHeroSection() {
         {product.subtitle}
       </p>
 
-      {/* Deal expires countdown */}
-      <div className="border border-white/[0.06] rounded bg-white/[0.02] px-6 py-4 inline-flex flex-col items-center mb-8">
-        <CountdownTimer
-          targetIso={product.dropExpiresAt}
-          label="Deal Expires"
-          size="sm"
-        />
-      </div>
-
       {/* Price row */}
       <div className="grid grid-cols-3 gap-0 border border-white/[0.06] rounded overflow-hidden mb-2">
-        {/* TCG Best */}
         <div className="flex flex-col items-center py-4 px-3 border-r border-white/[0.06]">
           <span className="text-[9px] uppercase tracking-[0.2em] text-gray-600 mb-1">TCG Best</span>
           <span className="text-base text-gray-500 line-through">${product.tcgBestPrice.toFixed(2)}</span>
         </div>
-        {/* Today's Drop */}
         <div className="flex flex-col items-center py-4 px-3 border-r border-white/[0.06] bg-cyan-400/[0.05]">
           <span className="text-[9px] uppercase tracking-[0.2em] text-cyan-400 mb-1">Today's Drop</span>
           <span className="text-xl font-bold text-cyan-400">${product.dropPrice}</span>
         </div>
-        {/* You Save */}
         <div className="flex flex-col items-center py-4 px-3">
           <span className="text-[9px] uppercase tracking-[0.2em] text-gray-600 mb-1">You Save</span>
           <span className="text-base font-semibold text-cyan-400">{product.savingsPercent}%</span>
