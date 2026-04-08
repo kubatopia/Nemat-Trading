@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef } from "react";
 import { product as staticProduct } from "@/data/product";
 import { useActiveProduct } from "@/hooks/useActiveProduct";
 
@@ -48,67 +48,52 @@ export default function ProductHeroSection() {
   const dbProduct = useActiveProduct();
   const [tcgPrice, setTcgPrice] = useState<number | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const fetchGenRef = useRef(0); // generation counter — only the latest fetch may set state
-
-  const tcgplayerUrl = dbProduct?.tcgplayerUrl ?? null;
-  const scryfallId = dbProduct?.scryfallId ?? null;
-  const tcgMarketPriceCents = dbProduct?.tcgMarketPriceCents ?? null;
-
-  const fetchPrice = useCallback(async () => {
-    if (!API_URL) return;
-    const gen = ++fetchGenRef.current;
-
-    // Helper: only update state if this fetch hasn't been superseded
-    const commit = (price: number) => {
-      if (fetchGenRef.current === gen) setTcgPrice(price);
-    };
-
-    // 1. TCGPlayer URL → live lowest listing (preferred source)
-    if (tcgplayerUrl) {
-      try {
-        const r = await fetch(`${API_URL}/api/tcgplayer/price`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: tcgplayerUrl }),
-        });
-        const d = await r.json();
-        if (d.lowestPrice) { commit(parseFloat(d.lowestPrice)); return; }
-      } catch {}
-      // If TCGPlayer URL is set but fetch failed, fall back to stored price
-      if (tcgMarketPriceCents) { commit(tcgMarketPriceCents / 100); return; }
-    }
-
-    // 2. Scryfall card price (only when no TCGPlayer URL)
-    if (!tcgplayerUrl && scryfallId) {
-      try {
-        const r = await fetch(`${API_URL}/api/scryfall/${scryfallId}/price`);
-        const d = await r.json();
-        if (d.usd) { commit(parseFloat(d.usd)); return; }
-      } catch {}
-    }
-
-    // 3. Stored TCG market price from DB
-    if (tcgMarketPriceCents) { commit(tcgMarketPriceCents / 100); }
-  }, [tcgplayerUrl, scryfallId, tcgMarketPriceCents]);
+  const setupDoneRef = useRef(false); // ensure we only set up the poll once
 
   useEffect(() => {
-    if (!dbProduct) return; // wait until product is loaded
+    if (!dbProduct || !API_URL || setupDoneRef.current) return;
+    setupDoneRef.current = true;
+
+    const tcgplayerUrl = dbProduct.tcgplayerUrl;
+    const tcgMarketPriceCents = dbProduct.tcgMarketPriceCents;
+
+    async function fetchPrice() {
+      // Primary: TCGPlayer live lowest listing
+      if (tcgplayerUrl) {
+        try {
+          const r = await fetch(`${API_URL}/api/tcgplayer/price`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url: tcgplayerUrl }),
+          });
+          const d = await r.json();
+          if (d.lowestPrice) { setTcgPrice(parseFloat(d.lowestPrice)); return; }
+        } catch {}
+      }
+      // Fallback: stored market price from last admin lookup
+      if (tcgMarketPriceCents) {
+        setTcgPrice(tcgMarketPriceCents / 100);
+      }
+    }
+
     fetchPrice();
-    if (pollRef.current) clearInterval(pollRef.current);
     pollRef.current = setInterval(fetchPrice, 5 * 60 * 1000);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, [fetchPrice, dbProduct]);
+  }, [dbProduct]);
 
   const title = dbProduct?.title ?? staticProduct.title;
   const subtitle = dbProduct?.subtitle ?? staticProduct.subtitle;
-  const discountPercent = dbProduct?.discountPercent ?? staticProduct.savingsPercent;
+
+  // Nemat price is FIXED — always the stored DB price, never fluctuates with TCG
+  const nematPrice = dbProduct ? dbProduct.price / 100 : staticProduct.dropPrice;
+
+  // TCG Best is the live price (or stored fallback)
   const tcgBest = tcgPrice
     ?? (dbProduct?.tcgMarketPriceCents ? dbProduct.tcgMarketPriceCents / 100 : null)
     ?? staticProduct.tcgBestPrice;
-  const nematPrice = dbProduct
-    ? (tcgPrice ? parseFloat((tcgPrice * (1 - discountPercent / 100)).toFixed(2)) : dbProduct.price / 100)
-    : staticProduct.dropPrice;
-  const savings = Math.round((1 - nematPrice / tcgBest) * 100);
+
+  // Savings calculated dynamically: how much cheaper are we vs current TCG best
+  const savings = tcgBest > nematPrice ? Math.round((1 - nematPrice / tcgBest) * 100) : 0;
 
   return (
     <section className="pb-10">
