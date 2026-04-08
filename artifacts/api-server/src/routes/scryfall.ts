@@ -160,6 +160,15 @@ router.post("/tcgplayer/price", async (req, res) => {
   res.json({ lowestPrice });
 });
 
+// GET version for easy browser testing: /api/tcgplayer/price-check?id=657851
+router.get("/tcgplayer/price-check", async (req, res) => {
+  const id = req.query.id as string;
+  if (!id) { res.status(400).json({ error: "id query param required" }); return; }
+  const url = `https://www.tcgplayer.com/product/${id}/product`;
+  const result = await scrapeTCGPlayer(url);
+  res.json(result);
+});
+
 // Lookup product data from a TCGPlayer URL
 router.post("/lookup/tcgplayer", async (req, res) => {
   const { url } = req.body as { url: string };
