@@ -4,10 +4,25 @@ import { product } from "@/data/product";
 
 export default function PurchaseBar() {
   const [quantity, setQuantity] = useState(1);
+  const [loading, setLoading] = useState(false);
   const total = (product.dropPrice * quantity).toFixed(2);
 
-  const handleAcquire = () => {
-    window.location.assign(`/checkout?qty=${quantity}`);
+  const handleAcquire = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch("/api/checkout/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quantity }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data?.url) {
+        throw new Error("Failed to create checkout session");
+      }
+      window.location.assign(data.url);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -20,16 +35,11 @@ export default function PurchaseBar() {
         </div>
         <button
           onClick={handleAcquire}
-          className="
-            flex-shrink-0 px-8 py-3 bg-cyan-400 text-black text-xs font-bold
-            uppercase tracking-[0.25em] rounded
-            hover:bg-cyan-300 hover:shadow-[0_0_20px_rgba(34,211,238,0.25)]
-            active:bg-cyan-500
-            transition-all duration-200
-          "
+          disabled={loading}
+          className="flex-shrink-0 px-8 py-3 bg-cyan-400 text-black text-xs font-bold uppercase tracking-[0.25em] rounded hover:bg-cyan-300 hover:shadow-[0_0_20px_rgba(34,211,238,0.25)] active:bg-cyan-500 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
           aria-label="Acquire product"
         >
-          Acquire
+          {loading ? "Redirecting..." : "Acquire"}
         </button>
       </div>
     </div>
