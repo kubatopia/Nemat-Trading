@@ -14,6 +14,7 @@ type Product = {
   expiresAt: string | null;
   scryfallId: string | null;
   discountPercent: number;
+  tcgplayerUrl: string | null;
   createdAt: string;
 };
 
@@ -159,7 +160,7 @@ function ProductList({ adminKey, onEdit, onNew }: {
 
 const emptyForm = {
   title: "", subtitle: "", price: "", imageUrl: "",
-  stock: "", expiresAt: "", scryfallId: "", discountPercent: "15",
+  stock: "", expiresAt: "", scryfallId: "", discountPercent: "15", tcgplayerUrl: "",
 };
 
 function ProductForm({ adminKey, product, onBack, onSaved }: {
@@ -177,6 +178,7 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
     expiresAt: toDatetimeLocal(product.expiresAt),
     scryfallId: product.scryfallId ?? "",
     discountPercent: String(product.discountPercent ?? 15),
+    tcgplayerUrl: product.tcgplayerUrl ?? "",
   } : emptyForm);
 
   const [loading, setLoading] = useState(false);
@@ -211,6 +213,7 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
       expiresAt: form.expiresAt ? new Date(form.expiresAt).toISOString() : null,
       scryfallId: form.scryfallId,
       discountPercent: parseInt(form.discountPercent, 10) || 15,
+      tcgplayerUrl: form.tcgplayerUrl,
     };
     try {
       const url = isEdit ? `${API_URL}/api/admin/products/${product.id}` : `${API_URL}/api/admin/products`;
@@ -368,6 +371,15 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
               <p className={`text-xs mt-2 ${tcgPreview.startsWith("TCG") ? "text-cyan-400" : "text-gray-500"}`}>{tcgPreview}</p>
             )}
             <p className="text-[10px] text-gray-600 mt-2">Find the ID in the Scryfall URL: scryfall.com/card/.../<strong>card-id</strong></p>
+          </div>
+          <div className="mt-4">
+            <label className="text-[10px] uppercase tracking-[0.2em] text-gray-600 block mb-1.5">TCGPlayer Listing URL</label>
+            <input value={form.tcgplayerUrl}
+              onChange={(e) => setForm({ ...form, tcgplayerUrl: e.target.value })}
+              placeholder="https://www.tcgplayer.com/product/..."
+              className="w-full rounded border border-white/10 bg-black px-4 py-3 text-sm focus:outline-none focus:border-cyan-400/40"
+            />
+            <p className="text-[10px] text-gray-600 mt-2">When set, "TCG Best" on the storefront becomes a clickable link to this listing.</p>
           </div>
         </section>
 

@@ -15,6 +15,7 @@ export const productsTable = pgTable("products", {
   expiresAt: timestamp("expires_at"),
   scryfallId: text("scryfall_id").default(""),   // used to fetch live TCG price
   discountPercent: integer("discount_percent").notNull().default(15),
+  tcgplayerUrl: text("tcgplayer_url").default(""), // link to TCGPlayer listing
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

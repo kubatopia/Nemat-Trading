@@ -25,7 +25,7 @@ function requireAdmin(req: any, res: any, next: any) {
 
 // Admin: create product
 router.post("/admin/products", requireAdmin, async (req, res) => {
-  const { title, subtitle, price, imageUrl, stock, specs, contents, expiresAt, scryfallId, discountPercent } = req.body;
+  const { title, subtitle, price, imageUrl, stock, specs, contents, expiresAt, scryfallId, discountPercent, tcgplayerUrl } = req.body;
   const [product] = await db
     .insert(productsTable)
     .values({
@@ -39,6 +39,7 @@ router.post("/admin/products", requireAdmin, async (req, res) => {
       expiresAt: expiresAt ? new Date(expiresAt) : null,
       scryfallId: scryfallId ?? "",
       discountPercent: discountPercent ?? 15,
+      tcgplayerUrl: tcgplayerUrl ?? "",
       active: true,
     })
     .returning();
@@ -48,7 +49,7 @@ router.post("/admin/products", requireAdmin, async (req, res) => {
 // Admin: update product
 router.patch("/admin/products/:id", requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
-  const { title, subtitle, price, imageUrl, stock, active, specs, contents, expiresAt, scryfallId, discountPercent } = req.body;
+  const { title, subtitle, price, imageUrl, stock, active, specs, contents, expiresAt, scryfallId, discountPercent, tcgplayerUrl } = req.body;
   const updates: Record<string, any> = {};
   if (title !== undefined) updates.title = title;
   if (subtitle !== undefined) updates.subtitle = subtitle;
@@ -61,6 +62,7 @@ router.patch("/admin/products/:id", requireAdmin, async (req, res) => {
   if (expiresAt !== undefined) updates.expiresAt = expiresAt ? new Date(expiresAt) : null;
   if (scryfallId !== undefined) updates.scryfallId = scryfallId;
   if (discountPercent !== undefined) updates.discountPercent = discountPercent;
+  if (tcgplayerUrl !== undefined) updates.tcgplayerUrl = tcgplayerUrl;
 
   const [product] = await db
     .update(productsTable)

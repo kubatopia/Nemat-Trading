@@ -33,6 +33,7 @@ async function migrate() {
     ALTER TABLE products ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP;
     ALTER TABLE products ADD COLUMN IF NOT EXISTS scryfall_id TEXT DEFAULT '';
     ALTER TABLE products ADD COLUMN IF NOT EXISTS discount_percent INTEGER DEFAULT 15;
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS tcgplayer_url TEXT DEFAULT '';
   `);
 
   // Seed the default product if the table is empty

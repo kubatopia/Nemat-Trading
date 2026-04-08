@@ -13,6 +13,7 @@ export type DbProduct = {
   expiresAt: string | null;
   scryfallId: string | null;
   discountPercent: number;
+  tcgplayerUrl: string | null;
 };
 
 let cached: DbProduct | null = null;

@@ -82,7 +82,14 @@ export default function ProductHeroSection() {
 
       <div className="grid grid-cols-3 gap-0 border border-white/[0.06] rounded overflow-hidden mb-2">
         <div className="flex flex-col items-center py-4 px-3 border-r border-white/[0.06]">
-          <span className="text-[9px] uppercase tracking-[0.2em] text-gray-600 mb-1">TCG Best</span>
+          {dbProduct?.tcgplayerUrl ? (
+            <a href={dbProduct.tcgplayerUrl} target="_blank" rel="noopener noreferrer"
+              className="text-[9px] uppercase tracking-[0.2em] text-gray-600 hover:text-cyan-600 transition-colors mb-1 underline underline-offset-2">
+              TCG Best ↗
+            </a>
+          ) : (
+            <span className="text-[9px] uppercase tracking-[0.2em] text-gray-600 mb-1">TCG Best</span>
+          )}
           <span className="text-base text-gray-500 line-through">${tcgBest.toFixed(2)}</span>
           {tcgPrice && <span className="text-[8px] text-cyan-600 mt-0.5">Live</span>}
         </div>
