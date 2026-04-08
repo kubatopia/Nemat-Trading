@@ -7,7 +7,7 @@ export default function PurchaseBar() {
   const total = (product.dropPrice * quantity).toFixed(2);
 
   const handleAcquire = () => {
-    window.location.assign(`/checkout?qty=${quantity}`);
+    window.location.href = `/checkout?qty=${quantity}`;
   };
 
   return (
