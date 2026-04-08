@@ -158,6 +158,17 @@ function ProductList({ adminKey, onEdit, onNew }: {
 
 // ─── Product Form (New / Edit) ────────────────────────────────────────────────
 
+type LookupResult = {
+  type: "set" | "card";
+  suggestedTitle: string;
+  setName?: string;
+  setCode?: string;
+  scryfallId: string | null;
+  imageUrl: string | null;
+  usd: string | null;
+  topCards: { id: string; name: string; imageUrl: string | null; usd: string | null }[];
+};
+
 const emptyForm = {
   title: "", subtitle: "", price: "", imageUrl: "",
   stock: "", expiresAt: "", scryfallId: "", discountPercent: "15", tcgplayerUrl: "",
@@ -184,19 +195,38 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [tcgPreview, setTcgPreview] = useState<string | null>(null);
+  const [lookupLoading, setLookupLoading] = useState(false);
+  const [lookupResult, setLookupResult] = useState<LookupResult | null>(null);
+  const [lookupError, setLookupError] = useState<string | null>(null);
 
   const isEdit = !!product;
 
-  async function fetchTcgPreview() {
-    if (!form.scryfallId.trim()) return;
-    setTcgPreview("Loading...");
+  async function handleLookup() {
+    const url = form.tcgplayerUrl.trim();
+    if (!url) return;
+    setLookupLoading(true);
+    setLookupError(null);
+    setLookupResult(null);
     try {
-      const res = await fetch(`${API_URL}/api/scryfall/${form.scryfallId.trim()}/price`);
+      const res = await fetch(`${API_URL}/api/lookup/tcgplayer`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
       const data = await res.json();
-      setTcgPreview(data.usd ? `TCG Best: $${data.usd}` : "Price not found");
-    } catch {
-      setTcgPreview("Could not fetch");
+      if (!res.ok) { setLookupError(data.error ?? "Lookup failed"); return; }
+      setLookupResult(data as LookupResult);
+      // Auto-fill title and scryfallId from result
+      setForm((f) => ({
+        ...f,
+        title: f.title || data.suggestedTitle || f.title,
+        scryfallId: data.scryfallId ?? f.scryfallId,
+        imageUrl: f.imageUrl || data.imageUrl || f.imageUrl,
+      }));
+    } catch (err: any) {
+      setLookupError(err.message ?? "Lookup failed");
+    } finally {
+      setLookupLoading(false);
     }
   }
 
@@ -309,7 +339,7 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
         {/* Pricing */}
         <section className="border border-white/[0.06] rounded bg-white/[0.02] p-6">
           <h2 className="text-[10px] uppercase tracking-[0.25em] text-gray-500 mb-5">Pricing & Stock</h2>
-          <div className="grid sm:grid-cols-3 gap-4">
+          <div className="grid sm:grid-cols-2 gap-4">
             <div>
               <label className="text-[10px] uppercase tracking-[0.2em] text-gray-600 block mb-1.5">Nemat Price</label>
               <div className="relative">
@@ -327,15 +357,6 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
                 placeholder="0"
                 className="w-full rounded border border-white/10 bg-black px-4 py-3 text-sm focus:outline-none focus:border-cyan-400/40" />
             </div>
-            <div>
-              <label className="text-[10px] uppercase tracking-[0.2em] text-gray-600 block mb-1.5">Discount %</label>
-              <div className="relative">
-                <input type="number" min="0" max="100" value={form.discountPercent}
-                  onChange={(e) => setForm({ ...form, discountPercent: e.target.value })}
-                  className="w-full rounded border border-white/10 bg-black px-4 py-3 text-sm focus:outline-none focus:border-cyan-400/40" />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm">%</span>
-              </div>
-            </div>
           </div>
         </section>
 
@@ -351,35 +372,83 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
           </div>
         </section>
 
-        {/* TCG Data */}
+        {/* TCG Lookup */}
         <section className="border border-white/[0.06] rounded bg-white/[0.02] p-6">
-          <h2 className="text-[10px] uppercase tracking-[0.25em] text-gray-500 mb-1">TCG Pricing</h2>
-          <p className="text-[10px] text-gray-600 mb-5">Link a Scryfall card to auto-fetch the live TCG market price and calculate savings.</p>
+          <h2 className="text-[10px] uppercase tracking-[0.25em] text-gray-500 mb-1">TCGPlayer Auto-Fill</h2>
+          <p className="text-[10px] text-gray-600 mb-5">Paste a TCGPlayer product URL to auto-fill the product name and pull card data from Scryfall.</p>
+
           <div>
-            <label className="text-[10px] uppercase tracking-[0.2em] text-gray-600 block mb-1.5">Scryfall Card ID</label>
+            <label className="text-[10px] uppercase tracking-[0.2em] text-gray-600 block mb-1.5">TCGPlayer URL</label>
             <div className="flex gap-2">
-              <input value={form.scryfallId}
-                onChange={(e) => { setForm({ ...form, scryfallId: e.target.value }); setTcgPreview(null); }}
-                placeholder="e.g. 2e914c3d-2eed-48bf-af9a-a8998fd5111d"
-                className="flex-1 rounded border border-white/10 bg-black px-4 py-3 text-sm focus:outline-none focus:border-cyan-400/40 font-mono" />
-              <button type="button" onClick={fetchTcgPreview}
-                className="rounded border border-white/10 px-5 py-2 text-xs text-gray-400 hover:text-white transition-colors">
-                Test
+              <input value={form.tcgplayerUrl}
+                onChange={(e) => { setForm({ ...form, tcgplayerUrl: e.target.value }); setLookupResult(null); setLookupError(null); }}
+                placeholder="https://www.tcgplayer.com/product/..."
+                className="flex-1 rounded border border-white/10 bg-black px-4 py-3 text-sm focus:outline-none focus:border-cyan-400/40" />
+              <button type="button" onClick={handleLookup} disabled={lookupLoading || !form.tcgplayerUrl.trim()}
+                className="rounded border border-cyan-400/30 px-5 py-2 text-xs text-cyan-400 hover:bg-cyan-400/10 transition-colors disabled:opacity-40 whitespace-nowrap">
+                {lookupLoading ? "Looking up..." : "Look Up"}
               </button>
             </div>
-            {tcgPreview && (
-              <p className={`text-xs mt-2 ${tcgPreview.startsWith("TCG") ? "text-cyan-400" : "text-gray-500"}`}>{tcgPreview}</p>
-            )}
-            <p className="text-[10px] text-gray-600 mt-2">Find the ID in the Scryfall URL: scryfall.com/card/.../<strong>card-id</strong></p>
+            <p className="text-[10px] text-gray-600 mt-2">The "TCG Best" price on the storefront links to this URL. Price is fetched live from Scryfall.</p>
           </div>
-          <div className="mt-4">
-            <label className="text-[10px] uppercase tracking-[0.2em] text-gray-600 block mb-1.5">TCGPlayer Listing URL</label>
-            <input value={form.tcgplayerUrl}
-              onChange={(e) => setForm({ ...form, tcgplayerUrl: e.target.value })}
-              placeholder="https://www.tcgplayer.com/product/..."
-              className="w-full rounded border border-white/10 bg-black px-4 py-3 text-sm focus:outline-none focus:border-cyan-400/40"
-            />
-            <p className="text-[10px] text-gray-600 mt-2">When set, "TCG Best" on the storefront becomes a clickable link to this listing.</p>
+
+          {lookupError && (
+            <p className="text-xs text-red-400 mt-3">{lookupError}</p>
+          )}
+
+          {lookupResult && (
+            <div className="mt-4 border border-white/[0.06] rounded p-4 bg-black/30">
+              {lookupResult.type === "set" ? (
+                <>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-[10px] uppercase tracking-[0.2em] text-cyan-400">Set Found</span>
+                    <span className="text-sm text-white font-medium">{lookupResult.setName}</span>
+                    <span className="text-[10px] text-gray-600 font-mono uppercase">{lookupResult.setCode}</span>
+                  </div>
+                  <p className="text-[10px] text-gray-500 mb-3">Title auto-filled. Top cards by price (will appear as possible pulls on storefront):</p>
+                  <div className="flex flex-wrap gap-2">
+                    {lookupResult.topCards.slice(0, 8).map((c) => (
+                      <div key={c.id} className="flex flex-col items-center gap-1 w-16">
+                        {c.imageUrl && <img src={c.imageUrl} alt={c.name} className="w-16 rounded opacity-90" />}
+                        {c.usd && <span className="text-[9px] text-cyan-400">${c.usd}</span>}
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-yellow-600/80 mt-3">Note: Scryfall doesn't track booster pack prices. Enter your Nemat Price manually below.</p>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center gap-3">
+                    {lookupResult.imageUrl && <img src={lookupResult.imageUrl} alt={lookupResult.suggestedTitle} className="w-12 rounded" />}
+                    <div>
+                      <p className="text-sm text-white font-medium">{lookupResult.suggestedTitle}</p>
+                      {lookupResult.usd && <p className="text-xs text-cyan-400 mt-0.5">TCG Market: ${lookupResult.usd}</p>}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          <div className="mt-5 grid sm:grid-cols-2 gap-4">
+            <div>
+              <label className="text-[10px] uppercase tracking-[0.2em] text-gray-600 block mb-1.5">Scryfall Card ID <span className="text-gray-700 normal-case">(optional — for live price)</span></label>
+              <input value={form.scryfallId}
+                onChange={(e) => setForm({ ...form, scryfallId: e.target.value })}
+                placeholder="auto-filled or paste manually"
+                className="w-full rounded border border-white/10 bg-black px-4 py-3 text-sm focus:outline-none focus:border-cyan-400/40 font-mono" />
+              <p className="text-[10px] text-gray-600 mt-1">scryfall.com/card/.../&lt;id&gt; — enables live TCG price on storefront.</p>
+            </div>
+            <div>
+              <label className="text-[10px] uppercase tracking-[0.2em] text-gray-600 block mb-1.5">Nemat Discount %</label>
+              <div className="relative">
+                <input type="number" min="0" max="100" value={form.discountPercent}
+                  onChange={(e) => setForm({ ...form, discountPercent: e.target.value })}
+                  className="w-full rounded border border-white/10 bg-black px-4 py-3 text-sm focus:outline-none focus:border-cyan-400/40" />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm">%</span>
+              </div>
+              <p className="text-[10px] text-gray-600 mt-1">Applied to live Scryfall price to calculate storefront savings.</p>
+            </div>
           </div>
         </section>
 
