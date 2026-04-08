@@ -22,7 +22,8 @@ function dedupeWords(s: string): string {
 /** Recursively search a JSON object for a positive numeric price value at known keys */
 function findPriceInJson(obj: unknown, depth = 0): string | null {
   if (depth > 6 || !obj || typeof obj !== "object") return null;
-  const PRICE_KEYS = ["marketPrice", "lowestPrice", "lowPrice", "lowestListingPrice", "directLowPrice"];
+  // Prefer lowest active listing over weighted market average
+  const PRICE_KEYS = ["lowestListingPrice", "directLowPrice", "lowPrice", "lowestPrice", "marketPrice"];
   for (const key of PRICE_KEYS) {
     const val = (obj as any)[key];
     const n = typeof val === "number" ? val : parseFloat(val);
