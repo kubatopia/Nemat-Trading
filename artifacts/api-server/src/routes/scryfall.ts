@@ -56,32 +56,54 @@ async function scrapeTCGPlayer(url: string): Promise<{ imageUrl: string | null; 
 
   let lowestPrice: string | null = null;
 
-  // 2. Try TCGPlayer marketplace API (semi-public, used by their own frontend)
+  const mpHeaders = {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Referer": "https://www.tcgplayer.com/",
+    "Origin": "https://www.tcgplayer.com",
+    "Accept": "application/json, text/plain, */*",
+  };
+
   if (productId) {
+    // 2a. Try the listings endpoint — returns actual active seller listings sorted by price
+    //     The minimum price here is the true "As low as" number shown on TCGPlayer
     try {
-      const mpRes = await fetch(
-        `https://mpapi.tcgplayer.com/v2/product/${productId}/pricepoints?mpfev=2`,
-        {
-          headers: {
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-            "Referer": "https://www.tcgplayer.com/",
-            "Origin": "https://www.tcgplayer.com",
-          },
-        }
+      const listRes = await fetch(
+        `https://mpapi.tcgplayer.com/v2/product/${productId}/listings?condition=Near+Mint&printing=Normal&language=English&iDisplayStart=0&iDisplayLength=10`,
+        { headers: mpHeaders }
       );
-      if (mpRes.ok) {
-        const mpData = await mpRes.json();
-        lowestPrice = findPriceInJson(mpData);
+      if (listRes.ok) {
+        const listData = await listRes.json();
+        const results: any[] = listData?.results ?? listData?.data ?? [];
+        const prices = results
+          .map((l: any) => parseFloat(l.price ?? l.listingPrice ?? l.sellerPrice ?? 0))
+          .filter((p: number) => p > 0);
+        if (prices.length > 0) {
+          lowestPrice = Math.min(...prices).toFixed(2);
+        }
       }
     } catch {}
+
+    // 2b. Fallback: pricepoints endpoint (returns market price, not lowest listing)
+    if (!lowestPrice) {
+      try {
+        const ppRes = await fetch(
+          `https://mpapi.tcgplayer.com/v2/product/${productId}/pricepoints?mpfev=2`,
+          { headers: mpHeaders }
+        );
+        if (ppRes.ok) {
+          const ppData = await ppRes.json();
+          lowestPrice = findPriceInJson(ppData);
+        }
+      } catch {}
+    }
   }
 
-  // 3. HTML scrape fallback — works when Cloudflare doesn't intercept
+  // 3. HTML scrape fallback — works when mpapi doesn't have listings data
   if (!lowestPrice) {
     try {
       const res = await fetch(url, {
         headers: {
-          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          "User-Agent": mpHeaders["User-Agent"],
           "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
           "Accept-Language": "en-US,en;q=0.9",
         },
@@ -89,7 +111,7 @@ async function scrapeTCGPlayer(url: string): Promise<{ imageUrl: string | null; 
       if (res.ok) {
         const html = await res.text();
 
-        // JSON-LD structured data
+        // JSON-LD structured data (AggregateOffer.lowPrice is the "As low as" value)
         const jsonLdBlocks = [...html.matchAll(/<script[^>]+type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi)];
         for (const block of jsonLdBlocks) {
           try {
