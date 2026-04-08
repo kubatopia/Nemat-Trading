@@ -15,6 +15,7 @@ type Product = {
   scryfallId: string | null;
   discountPercent: number;
   tcgplayerUrl: string | null;
+  tcgMarketPriceCents: number | null;
   createdAt: string;
 };
 
@@ -170,8 +171,9 @@ type LookupResult = {
 };
 
 const emptyForm = {
-  title: "", subtitle: "", price: "", imageUrl: "",
-  stock: "", expiresAt: "", scryfallId: "", discountPercent: "15", tcgplayerUrl: "",
+  title: "", subtitle: "", tcgplayerUrl: "", imageUrl: "",
+  price: "", stock: "", expiresAt: "",
+  scryfallId: "", discountPercent: "15",
 };
 
 function ProductForm({ adminKey, product, onBack, onSaved }: {
@@ -183,13 +185,13 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
   const [form, setForm] = useState(product ? {
     title: product.title,
     subtitle: product.subtitle,
-    price: (product.price / 100).toFixed(2),
+    tcgplayerUrl: product.tcgplayerUrl ?? "",
     imageUrl: product.imageUrl,
+    price: (product.price / 100).toFixed(2),
     stock: String(product.stock),
     expiresAt: toDatetimeLocal(product.expiresAt),
     scryfallId: product.scryfallId ?? "",
     discountPercent: String(product.discountPercent ?? 15),
-    tcgplayerUrl: product.tcgplayerUrl ?? "",
   } : emptyForm);
 
   const [loading, setLoading] = useState(false);
@@ -199,7 +201,9 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
   const [lookupResult, setLookupResult] = useState<LookupResult | null>(null);
   const [lookupError, setLookupError] = useState<string | null>(null);
   // TCG market price used as reference for auto-calculating discount %
-  const [tcgMarketPrice, setTcgMarketPrice] = useState("");
+  const [tcgMarketPrice, setTcgMarketPrice] = useState(
+    product?.tcgMarketPriceCents ? (product.tcgMarketPriceCents / 100).toFixed(2) : ""
+  );
   const discountManuallyEdited = useRef(false);
 
   const isEdit = !!product;
@@ -260,6 +264,7 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
       scryfallId: form.scryfallId,
       discountPercent: parseInt(form.discountPercent, 10) || 15,
       tcgplayerUrl: form.tcgplayerUrl,
+      tcgMarketPriceCents: tcgMarketPrice ? Math.round(parseFloat(tcgMarketPrice) * 100) : null,
     };
     try {
       const url = isEdit ? `${API_URL}/api/admin/products/${product.id}` : `${API_URL}/api/admin/products`;
@@ -343,10 +348,60 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
                   className="w-full rounded border border-white/10 bg-black px-4 py-3 text-sm focus:outline-none focus:border-cyan-400/40" />
               </div>
             </div>
+
+            {/* TCGPlayer URL — auto-fills title, image, and TCG market price */}
+            <div>
+              <label className="text-[10px] uppercase tracking-[0.2em] text-gray-600 block mb-1.5">TCGPlayer URL</label>
+              <div className="flex gap-2">
+                <input value={form.tcgplayerUrl}
+                  onChange={(e) => { setForm({ ...form, tcgplayerUrl: e.target.value }); setLookupResult(null); setLookupError(null); }}
+                  placeholder="https://www.tcgplayer.com/product/..."
+                  className="flex-1 rounded border border-white/10 bg-black px-4 py-3 text-sm focus:outline-none focus:border-cyan-400/40" />
+                <button type="button" onClick={handleLookup} disabled={lookupLoading || !form.tcgplayerUrl.trim()}
+                  className="rounded border border-cyan-400/30 px-5 py-2 text-xs text-cyan-400 hover:bg-cyan-400/10 transition-colors disabled:opacity-40 whitespace-nowrap">
+                  {lookupLoading ? "Looking up..." : "Look Up"}
+                </button>
+              </div>
+              <p className="text-[10px] text-gray-600 mt-1.5">Auto-fills title, image, and TCG market price. "TCG Best" on storefront links here.</p>
+            </div>
+
+            {lookupError && <p className="text-xs text-red-400">{lookupError}</p>}
+
+            {lookupResult && (
+              <div className="border border-white/[0.06] rounded p-4 bg-black/30">
+                {lookupResult.type === "set" ? (
+                  <>
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-[10px] uppercase tracking-[0.2em] text-cyan-400">Set Found</span>
+                      <span className="text-sm text-white font-medium">{lookupResult.setName}</span>
+                      <span className="text-[10px] text-gray-600 font-mono uppercase">{lookupResult.setCode}</span>
+                    </div>
+                    <p className="text-[10px] text-gray-500 mb-3">Top cards by price shown as possible pulls on storefront:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {lookupResult.topCards.slice(0, 8).map((c) => (
+                        <div key={c.id} className="flex flex-col items-center gap-1 w-16">
+                          {c.imageUrl && <img src={c.imageUrl} alt={c.name} className="w-16 rounded opacity-90" />}
+                          {c.usd && <span className="text-[9px] text-cyan-400">${c.usd}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    {lookupResult.imageUrl && <img src={lookupResult.imageUrl} alt={lookupResult.suggestedTitle} className="w-12 rounded" />}
+                    <div>
+                      <p className="text-sm text-white font-medium">{lookupResult.suggestedTitle}</p>
+                      {lookupResult.usd && <p className="text-xs text-cyan-400 mt-0.5">TCG Market: ${lookupResult.usd}</p>}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div>
               <label className="text-[10px] uppercase tracking-[0.2em] text-gray-600 block mb-1.5">Image URL</label>
               <input value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
-                placeholder="https://... or /filename.png"
+                placeholder="Auto-filled from Look Up, or paste manually"
                 className="w-full rounded border border-white/10 bg-black px-4 py-3 text-sm focus:outline-none focus:border-cyan-400/40" />
             </div>
           </div>
@@ -355,7 +410,7 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
         {/* Pricing */}
         <section className="border border-white/[0.06] rounded bg-white/[0.02] p-6">
           <h2 className="text-[10px] uppercase tracking-[0.25em] text-gray-500 mb-5">Pricing & Stock</h2>
-          <div className="grid sm:grid-cols-2 gap-4">
+          <div className="grid sm:grid-cols-3 gap-4">
             <div>
               <label className="text-[10px] uppercase tracking-[0.2em] text-gray-600 block mb-1.5">Nemat Price</label>
               <div className="relative">
@@ -365,11 +420,6 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
                   placeholder="32.00"
                   className="w-full rounded border border-white/10 bg-black pl-8 pr-4 py-3 text-sm focus:outline-none focus:border-cyan-400/40" />
               </div>
-              {tcgMarketPrice && form.price && (
-                <p className="text-[10px] text-cyan-600 mt-1">
-                  Discount auto-computed: {form.discountPercent}% off ${parseFloat(tcgMarketPrice).toFixed(2)} TCG market
-                </p>
-              )}
             </div>
             <div>
               <label className="text-[10px] uppercase tracking-[0.2em] text-gray-600 block mb-1.5">Stock</label>
@@ -377,6 +427,26 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
                 onChange={(e) => setForm({ ...form, stock: e.target.value })}
                 placeholder="0"
                 className="w-full rounded border border-white/10 bg-black px-4 py-3 text-sm focus:outline-none focus:border-cyan-400/40" />
+            </div>
+            <div>
+              <label className="text-[10px] uppercase tracking-[0.2em] text-gray-600 block mb-1.5">
+                Discount %
+                {tcgMarketPrice && form.price
+                  ? <span className="text-gray-700 ml-1 normal-case">(auto)</span>
+                  : <span className="text-gray-700 ml-1 normal-case">(manual)</span>}
+              </label>
+              <div className="relative">
+                <input type="number" min="0" max="100"
+                  value={form.discountPercent}
+                  onChange={(e) => { discountManuallyEdited.current = true; setForm({ ...form, discountPercent: e.target.value }); }}
+                  className={`w-full rounded border bg-black px-4 py-3 text-sm focus:outline-none focus:border-cyan-400/40 ${tcgMarketPrice && form.price ? "border-cyan-400/30 text-cyan-400" : "border-white/10"}`} />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm">%</span>
+              </div>
+              {tcgMarketPrice && form.price && (
+                <p className="text-[10px] text-gray-600 mt-1">
+                  {form.discountPercent}% off ${parseFloat(tcgMarketPrice).toFixed(2)} TCG
+                </p>
+              )}
             </div>
           </div>
         </section>
@@ -393,73 +463,10 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
           </div>
         </section>
 
-        {/* TCG Lookup */}
+        {/* TCG Reference */}
         <section className="border border-white/[0.06] rounded bg-white/[0.02] p-6">
-          <h2 className="text-[10px] uppercase tracking-[0.25em] text-gray-500 mb-1">TCGPlayer Auto-Fill</h2>
-          <p className="text-[10px] text-gray-600 mb-5">Paste a TCGPlayer product URL to auto-fill the product name and pull card data from Scryfall.</p>
-
-          <div>
-            <label className="text-[10px] uppercase tracking-[0.2em] text-gray-600 block mb-1.5">TCGPlayer URL</label>
-            <div className="flex gap-2">
-              <input value={form.tcgplayerUrl}
-                onChange={(e) => { setForm({ ...form, tcgplayerUrl: e.target.value }); setLookupResult(null); setLookupError(null); }}
-                placeholder="https://www.tcgplayer.com/product/..."
-                className="flex-1 rounded border border-white/10 bg-black px-4 py-3 text-sm focus:outline-none focus:border-cyan-400/40" />
-              <button type="button" onClick={handleLookup} disabled={lookupLoading || !form.tcgplayerUrl.trim()}
-                className="rounded border border-cyan-400/30 px-5 py-2 text-xs text-cyan-400 hover:bg-cyan-400/10 transition-colors disabled:opacity-40 whitespace-nowrap">
-                {lookupLoading ? "Looking up..." : "Look Up"}
-              </button>
-            </div>
-            <p className="text-[10px] text-gray-600 mt-2">The "TCG Best" price on the storefront links to this URL. Price is fetched live from Scryfall.</p>
-          </div>
-
-          {lookupError && (
-            <p className="text-xs text-red-400 mt-3">{lookupError}</p>
-          )}
-
-          {lookupResult && (
-            <div className="mt-4 border border-white/[0.06] rounded p-4 bg-black/30">
-              {lookupResult.type === "set" ? (
-                <>
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-[10px] uppercase tracking-[0.2em] text-cyan-400">Set Found</span>
-                    <span className="text-sm text-white font-medium">{lookupResult.setName}</span>
-                    <span className="text-[10px] text-gray-600 font-mono uppercase">{lookupResult.setCode}</span>
-                  </div>
-                  <p className="text-[10px] text-gray-500 mb-3">Title auto-filled. Top cards by price (will appear as possible pulls on storefront):</p>
-                  <div className="flex flex-wrap gap-2">
-                    {lookupResult.topCards.slice(0, 8).map((c) => (
-                      <div key={c.id} className="flex flex-col items-center gap-1 w-16">
-                        {c.imageUrl && <img src={c.imageUrl} alt={c.name} className="w-16 rounded opacity-90" />}
-                        {c.usd && <span className="text-[9px] text-cyan-400">${c.usd}</span>}
-                      </div>
-                    ))}
-                  </div>
-                  <p className="text-[10px] text-yellow-600/80 mt-3">Note: Scryfall doesn't track booster pack prices. Enter your Nemat Price manually below.</p>
-                </>
-              ) : (
-                <>
-                  <div className="flex items-center gap-3">
-                    {lookupResult.imageUrl && <img src={lookupResult.imageUrl} alt={lookupResult.suggestedTitle} className="w-12 rounded" />}
-                    <div>
-                      <p className="text-sm text-white font-medium">{lookupResult.suggestedTitle}</p>
-                      {lookupResult.usd && <p className="text-xs text-cyan-400 mt-0.5">TCG Market: ${lookupResult.usd}</p>}
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-
-          <div className="mt-5 grid sm:grid-cols-2 gap-4">
-            <div>
-              <label className="text-[10px] uppercase tracking-[0.2em] text-gray-600 block mb-1.5">Scryfall Card ID <span className="text-gray-700 normal-case">(optional — for live price)</span></label>
-              <input value={form.scryfallId}
-                onChange={(e) => setForm({ ...form, scryfallId: e.target.value })}
-                placeholder="auto-filled or paste manually"
-                className="w-full rounded border border-white/10 bg-black px-4 py-3 text-sm focus:outline-none focus:border-cyan-400/40 font-mono" />
-              <p className="text-[10px] text-gray-600 mt-1">scryfall.com/card/.../&lt;id&gt; — enables live TCG price on storefront.</p>
-            </div>
+          <h2 className="text-[10px] uppercase tracking-[0.25em] text-gray-500 mb-5">TCG Reference</h2>
+          <div className="grid sm:grid-cols-2 gap-4">
             <div>
               <label className="text-[10px] uppercase tracking-[0.2em] text-gray-600 block mb-1.5">
                 TCG Market Price <span className="text-gray-700 normal-case">(for discount calc)</span>
@@ -468,35 +475,21 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
                 <input type="number" step="0.01" min="0" value={tcgMarketPrice}
                   onChange={(e) => { discountManuallyEdited.current = false; setTcgMarketPrice(e.target.value); }}
-                  placeholder="auto-filled from lookup"
+                  placeholder="Auto-filled from Look Up"
                   className="w-full rounded border border-white/10 bg-black pl-8 pr-4 py-3 text-sm focus:outline-none focus:border-cyan-400/40" />
               </div>
               <p className="text-[10px] text-gray-600 mt-1">
-                Auto-filled for single cards. For packs, enter the TCGPlayer lowest price manually.
+                Auto-filled from Look Up. For packs, enter the TCGPlayer lowest price if not detected.
+                Storefront price refreshes every 5 min via TCGPlayer URL.
               </p>
-              {tcgMarketPrice && form.price && (
-                <div className="mt-2 flex items-center gap-2">
-                  <span className="text-[10px] text-gray-600">Computed discount:</span>
-                  <div className="flex items-center gap-1">
-                    <input type="number" min="0" max="100" value={form.discountPercent}
-                      onChange={(e) => { discountManuallyEdited.current = true; setForm({ ...form, discountPercent: e.target.value }); }}
-                      className="w-16 rounded border border-white/10 bg-black px-2 py-1 text-sm text-cyan-400 font-bold focus:outline-none focus:border-cyan-400/40 text-center" />
-                    <span className="text-sm text-cyan-400">%</span>
-                  </div>
-                  <span className="text-[10px] text-gray-600">(editable)</span>
-                </div>
-              )}
-              {!tcgMarketPrice && (
-                <div className="mt-2 flex items-center gap-2">
-                  <span className="text-[10px] text-gray-600">Discount %:</span>
-                  <div className="relative flex items-center gap-1">
-                    <input type="number" min="0" max="100" value={form.discountPercent}
-                      onChange={(e) => { discountManuallyEdited.current = true; setForm({ ...form, discountPercent: e.target.value }); }}
-                      className="w-16 rounded border border-white/10 bg-black px-2 py-1 text-sm focus:outline-none focus:border-cyan-400/40 text-center" />
-                    <span className="text-sm text-gray-500">%</span>
-                  </div>
-                </div>
-              )}
+            </div>
+            <div>
+              <label className="text-[10px] uppercase tracking-[0.2em] text-gray-600 block mb-1.5">Scryfall Card ID <span className="text-gray-700 normal-case">(individual cards)</span></label>
+              <input value={form.scryfallId}
+                onChange={(e) => setForm({ ...form, scryfallId: e.target.value })}
+                placeholder="Auto-filled or paste manually"
+                className="w-full rounded border border-white/10 bg-black px-4 py-3 text-sm focus:outline-none focus:border-cyan-400/40 font-mono" />
+              <p className="text-[10px] text-gray-600 mt-1">scryfall.com/card/.../&lt;id&gt; — fallback for live price on single-card products.</p>
             </div>
           </div>
         </section>

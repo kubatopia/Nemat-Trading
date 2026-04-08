@@ -13,9 +13,10 @@ export const productsTable = pgTable("products", {
   specs: text("specs").notNull().default("[]"), // JSON string
   contents: text("contents").notNull().default("[]"), // JSON string
   expiresAt: timestamp("expires_at"),
-  scryfallId: text("scryfall_id").default(""),   // used to fetch live TCG price
+  scryfallId: text("scryfall_id").default(""),        // used to fetch live TCG price via Scryfall
   discountPercent: integer("discount_percent").notNull().default(15),
-  tcgplayerUrl: text("tcgplayer_url").default(""), // link to TCGPlayer listing
+  tcgplayerUrl: text("tcgplayer_url").default(""),   // link to TCGPlayer listing
+  tcgMarketPriceCents: integer("tcg_market_price_cents"), // cached TCG market price in cents
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

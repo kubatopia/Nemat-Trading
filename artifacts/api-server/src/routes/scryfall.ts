@@ -2,6 +2,93 @@ import { Router } from "express";
 
 const router = Router();
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function titleCase(s: string) {
+  return s.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function dedupeWords(s: string): string {
+  const words = s.trim().split(/\s+/);
+  if (words.length < 4) return s;
+  const half = Math.floor(words.length / 2);
+  const first = words.slice(0, half).join(" ");
+  const second = words.slice(half).join(" ");
+  if (first === second) return first;
+  if (second.startsWith(first)) return first;
+  return s;
+}
+
+/**
+ * Fetch a TCGPlayer product page and extract:
+ *  - imageUrl  — from og:image meta tag (reliable)
+ *  - lowestPrice — from JSON-LD structured data or __NEXT_DATA__ (best-effort)
+ */
+async function scrapeTCGPlayer(url: string): Promise<{ imageUrl: string | null; lowestPrice: string | null }> {
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Cache-Control": "no-cache",
+      },
+    });
+    if (!res.ok) return { imageUrl: null, lowestPrice: null };
+    const html = await res.text();
+
+    // Product image — og:image is set server-side by TCGPlayer, reliable
+    const ogImg = html.match(/<meta[^>]+property="og:image"[^>]+content="([^"]+)"/i)
+      ?? html.match(/<meta[^>]+content="([^"]+)"[^>]+property="og:image"/i);
+    const imageUrl = ogImg?.[1] ?? null;
+
+    let lowestPrice: string | null = null;
+
+    // JSON-LD structured data (Product offers)
+    const jsonLdBlocks = [...html.matchAll(/<script[^>]+type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi)];
+    for (const block of jsonLdBlocks) {
+      try {
+        const data = JSON.parse(block[1]);
+        const items: any[] = Array.isArray(data) ? data : [data];
+        for (const item of items) {
+          const offers = item?.offers;
+          if (!offers) continue;
+          const price = offers.lowPrice ?? offers.price
+            ?? (Array.isArray(offers) ? offers[0]?.price : null);
+          if (price != null) { lowestPrice = String(price); break; }
+        }
+        if (lowestPrice) break;
+      } catch {}
+    }
+
+    // __NEXT_DATA__ fallback — TCGPlayer is Next.js, embeds page state here
+    if (!lowestPrice) {
+      const nextDataMatch = html.match(/<script id="__NEXT_DATA__"[^>]*type="application\/json"[^>]*>([\s\S]*?)<\/script>/i)
+        ?? html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/i);
+      if (nextDataMatch) {
+        try {
+          const nextData = JSON.parse(nextDataMatch[1]);
+          const pp = nextData?.props?.pageProps;
+          // Try known paths in TCGPlayer's data shape
+          const candidate =
+            pp?.product?.marketPrice ??
+            pp?.marketPrice ??
+            pp?.listings?.[0]?.price ??
+            pp?.lowestListing?.price ??
+            pp?.product?.lowestSalePrice;
+          if (candidate != null) lowestPrice = String(candidate);
+        } catch {}
+      }
+    }
+
+    return { imageUrl, lowestPrice };
+  } catch {
+    return { imageUrl: null, lowestPrice: null };
+  }
+}
+
+// ─── Routes ───────────────────────────────────────────────────────────────────
+
 // Proxy Scryfall price by card ID
 router.get("/scryfall/:id/price", async (req, res) => {
   const { id } = req.params;
@@ -15,24 +102,15 @@ router.get("/scryfall/:id/price", async (req, res) => {
   }
 });
 
-function titleCase(s: string) {
-  return s.replace(/\b\w/g, (c) => c.toUpperCase());
-}
+// Live refresh: fetch current lowest price from a TCGPlayer product URL
+router.post("/tcgplayer/price", async (req, res) => {
+  const { url } = req.body as { url?: string };
+  if (!url) { res.status(400).json({ error: "url required" }); return; }
+  const { lowestPrice } = await scrapeTCGPlayer(url);
+  res.json({ lowestPrice });
+});
 
-/** Remove repeated halves: "tmnt tmnt" → "tmnt" */
-function dedupeWords(s: string): string {
-  const words = s.trim().split(/\s+/);
-  if (words.length < 4) return s;
-  const half = Math.floor(words.length / 2);
-  const first = words.slice(0, half).join(" ");
-  const second = words.slice(half).join(" ");
-  if (first === second) return first;
-  // Also check if first appears at the start of second
-  if (second.startsWith(first)) return first;
-  return s;
-}
-
-// Lookup card/set data from a TCGPlayer URL
+// Lookup product data from a TCGPlayer URL
 router.post("/lookup/tcgplayer", async (req, res) => {
   const { url } = req.body as { url: string };
   if (!url) { res.status(400).json({ error: "url is required" }); return; }
@@ -42,17 +120,14 @@ router.post("/lookup/tcgplayer", async (req, res) => {
     const pathParts = urlObj.pathname.split("/").filter(Boolean);
     const slug = pathParts[pathParts.length - 1] ?? "";
 
-    // Detect pack/box product type from the slug
+    // Detect pack/box type
     const packMatch = slug.match(/(collector-booster(?:-pack|-box)?|draft-booster(?:-pack|-box)?|set-booster(?:-pack|-box)?|booster-(?:pack|box)|booster-display)/i);
-    const packType = packMatch
-      ? titleCase(packMatch[0].replace(/-/g, " "))
-      : null;
+    const packType = packMatch ? titleCase(packMatch[0].replace(/-/g, " ")) : null;
 
-    // Strip game prefixes and pack suffixes to isolate the set/card name
+    // Strip game prefix and pack suffix to isolate the set/card name
     let setName = slug
       .replace(/^magic-the-gathering-/, "")
       .replace(/^magic-/, "")
-      // Remove pack type suffix and everything after
       .replace(/([-_]collector[-_]booster.*)$/i, "")
       .replace(/([-_]draft[-_]booster.*)$/i, "")
       .replace(/([-_]set[-_]booster.*)$/i, "")
@@ -62,11 +137,18 @@ router.post("/lookup/tcgplayer", async (req, res) => {
       .trim();
 
     setName = dedupeWords(setName);
-
     const suggestedTitle = [titleCase(setName), packType].filter(Boolean).join(" ");
 
-    // --- Try to find a matching Scryfall set ---
-    const setsRes = await fetch("https://api.scryfall.com/sets");
+    // Scrape TCGPlayer for image + price (runs in parallel with Scryfall search)
+    const [tcgData, setsRes] = await Promise.all([
+      scrapeTCGPlayer(url),
+      fetch("https://api.scryfall.com/sets"),
+    ]);
+
+    const tcgImageUrl = tcgData.imageUrl;
+    const tcgLowestPrice = tcgData.lowestPrice;
+
+    // Try to find a matching Scryfall set
     if (setsRes.ok) {
       const setsData = await setsRes.json() as { data: any[] };
       const needle = setName.toLowerCase();
@@ -76,7 +158,7 @@ router.post("/lookup/tcgplayer", async (req, res) => {
       );
 
       if (set) {
-        // Fetch the top cards in this set by USD price
+        // Fetch top cards in this set by USD price
         const cardsRes = await fetch(
           `https://api.scryfall.com/cards/search?q=set:${set.code}&order=usd&dir=desc&page=1`
         );
@@ -98,17 +180,16 @@ router.post("/lookup/tcgplayer", async (req, res) => {
           suggestedTitle,
           setCode: set.code,
           setName: set.name,
-          setIconUrl: set.icon_svg_uri ?? null,
           topCards,
           scryfallId: null,
-          imageUrl: topCards[0]?.imageUrl ?? null,
-          usd: null, // Scryfall doesn't track booster pack prices
+          imageUrl: tcgImageUrl ?? topCards[0]?.imageUrl ?? null,
+          usd: tcgLowestPrice,  // from TCGPlayer scrape
         });
         return;
       }
     }
 
-    // --- Fall back: search Scryfall for an individual card by name ---
+    // Fall back: search Scryfall for an individual card by name
     const searchRes = await fetch(
       `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(setName)}`
     );
@@ -129,8 +210,8 @@ router.post("/lookup/tcgplayer", async (req, res) => {
         suggestedTitle: card.name,
         scryfallId: card.id,
         name: card.name,
-        imageUrl: card.image_uris?.normal ?? card.card_faces?.[0]?.image_uris?.normal ?? null,
-        usd: card.prices?.usd ?? null,
+        imageUrl: tcgImageUrl ?? card.image_uris?.normal ?? card.card_faces?.[0]?.image_uris?.normal ?? null,
+        usd: tcgLowestPrice ?? card.prices?.usd ?? null,
         topCards: [],
       });
       return;
@@ -142,8 +223,8 @@ router.post("/lookup/tcgplayer", async (req, res) => {
       suggestedTitle: card.name,
       scryfallId: card.id,
       name: card.name,
-      imageUrl: card.image_uris?.normal ?? card.card_faces?.[0]?.image_uris?.normal ?? null,
-      usd: card.prices?.usd ?? null,
+      imageUrl: tcgImageUrl ?? card.image_uris?.normal ?? card.card_faces?.[0]?.image_uris?.normal ?? null,
+      usd: tcgLowestPrice ?? card.prices?.usd ?? null,
       topCards: [],
     });
   } catch (err: any) {

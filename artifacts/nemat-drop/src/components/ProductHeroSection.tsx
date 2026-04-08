@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { product as staticProduct } from "@/data/product";
 import { useActiveProduct } from "@/hooks/useActiveProduct";
 
@@ -47,19 +47,54 @@ function DealCountdown({ expiresAt }: { expiresAt: string }) {
 export default function ProductHeroSection() {
   const dbProduct = useActiveProduct();
   const [tcgPrice, setTcgPrice] = useState<number | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Fetch live TCG price — prefer TCGPlayer URL scrape, fall back to Scryfall card price
   useEffect(() => {
-    if (!dbProduct?.scryfallId || !API_URL) return;
-    fetch(`${API_URL}/api/scryfall/${dbProduct.scryfallId}/price`)
-      .then((r) => r.json())
-      .then((d) => { if (d.usd) setTcgPrice(parseFloat(d.usd)); })
-      .catch(() => {});
-  }, [dbProduct?.scryfallId]);
+    setTcgPrice(null);
+    if (!API_URL) return;
+
+    async function fetchPrice() {
+      // 1. Try TCGPlayer URL (live scraped price)
+      if (dbProduct?.tcgplayerUrl) {
+        try {
+          const r = await fetch(`${API_URL}/api/tcgplayer/price`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url: dbProduct.tcgplayerUrl }),
+          });
+          const d = await r.json();
+          if (d.lowestPrice) { setTcgPrice(parseFloat(d.lowestPrice)); return; }
+        } catch {}
+      }
+      // 2. Fall back to Scryfall price by card ID
+      if (dbProduct?.scryfallId) {
+        try {
+          const r = await fetch(`${API_URL}/api/scryfall/${dbProduct.scryfallId}/price`);
+          const d = await r.json();
+          if (d.usd) { setTcgPrice(parseFloat(d.usd)); return; }
+        } catch {}
+      }
+      // 3. Fall back to stored tcgMarketPriceCents from DB
+      if (dbProduct?.tcgMarketPriceCents) {
+        setTcgPrice(dbProduct.tcgMarketPriceCents / 100);
+      }
+    }
+
+    fetchPrice();
+
+    // Refresh every 5 minutes to stay current
+    if (pollRef.current) clearInterval(pollRef.current);
+    pollRef.current = setInterval(fetchPrice, 5 * 60 * 1000);
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, [dbProduct?.tcgplayerUrl, dbProduct?.scryfallId, dbProduct?.tcgMarketPriceCents]);
 
   const title = dbProduct?.title ?? staticProduct.title;
   const subtitle = dbProduct?.subtitle ?? staticProduct.subtitle;
   const discountPercent = dbProduct?.discountPercent ?? staticProduct.savingsPercent;
-  const tcgBest = tcgPrice ?? staticProduct.tcgBestPrice;
+  const tcgBest = tcgPrice
+    ?? (dbProduct?.tcgMarketPriceCents ? dbProduct.tcgMarketPriceCents / 100 : null)
+    ?? staticProduct.tcgBestPrice;
   const nematPrice = dbProduct
     ? (tcgPrice ? parseFloat((tcgPrice * (1 - discountPercent / 100)).toFixed(2)) : dbProduct.price / 100)
     : staticProduct.dropPrice;

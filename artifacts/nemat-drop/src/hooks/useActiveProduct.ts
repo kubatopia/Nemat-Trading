@@ -14,6 +14,7 @@ export type DbProduct = {
   scryfallId: string | null;
   discountPercent: number;
   tcgplayerUrl: string | null;
+  tcgMarketPriceCents: number | null; // cached TCG market price for display
 };
 
 let cached: DbProduct | null = null;
