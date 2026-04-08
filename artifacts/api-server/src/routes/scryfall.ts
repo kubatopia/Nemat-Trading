@@ -169,6 +169,32 @@ router.get("/tcgplayer/price-check", async (req, res) => {
   res.json(result);
 });
 
+// Debug: dump raw responses from TCGPlayer APIs — /api/tcgplayer/debug?id=657851
+router.get("/tcgplayer/debug", async (req, res) => {
+  const id = req.query.id as string;
+  if (!id) { res.status(400).json({ error: "id required" }); return; }
+  const headers = {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Referer": "https://www.tcgplayer.com/",
+    "Origin": "https://www.tcgplayer.com",
+    "Accept": "application/json, text/plain, */*",
+  };
+  const results: Record<string, any> = {};
+  try {
+    const r = await fetch(`https://mpapi.tcgplayer.com/v2/product/${id}/pricepoints?mpfev=2`, { headers });
+    results.pricepoints = { status: r.status, body: await r.json() };
+  } catch (e: any) { results.pricepoints = { error: e.message }; }
+  try {
+    const r = await fetch(`https://mpapi.tcgplayer.com/v2/product/${id}/listings?condition=Near+Mint&printing=Normal&language=English&iDisplayStart=0&iDisplayLength=5`, { headers });
+    results.listings = { status: r.status, body: await r.json() };
+  } catch (e: any) { results.listings = { error: e.message }; }
+  try {
+    const r = await fetch(`https://mpapi.tcgplayer.com/v2/product/${id}/listings?iDisplayStart=0&iDisplayLength=5`, { headers });
+    results.listingsNoFilter = { status: r.status, body: await r.json() };
+  } catch (e: any) { results.listingsNoFilter = { error: e.message }; }
+  res.json(results);
+});
+
 // Lookup product data from a TCGPlayer URL
 router.post("/lookup/tcgplayer", async (req, res) => {
   const { url } = req.body as { url: string };
