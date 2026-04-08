@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { product as staticProduct } from "@/data/product";
 import { useActiveProduct } from "@/hooks/useActiveProduct";
 
@@ -48,46 +48,56 @@ export default function ProductHeroSection() {
   const dbProduct = useActiveProduct();
   const [tcgPrice, setTcgPrice] = useState<number | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const fetchGenRef = useRef(0); // generation counter — only the latest fetch may set state
 
-  // Fetch live TCG price — prefer TCGPlayer URL scrape, fall back to Scryfall card price
-  useEffect(() => {
-    setTcgPrice(null);
+  const tcgplayerUrl = dbProduct?.tcgplayerUrl ?? null;
+  const scryfallId = dbProduct?.scryfallId ?? null;
+  const tcgMarketPriceCents = dbProduct?.tcgMarketPriceCents ?? null;
+
+  const fetchPrice = useCallback(async () => {
     if (!API_URL) return;
+    const gen = ++fetchGenRef.current;
 
-    async function fetchPrice() {
-      // 1. Try TCGPlayer URL (live scraped price)
-      if (dbProduct?.tcgplayerUrl) {
-        try {
-          const r = await fetch(`${API_URL}/api/tcgplayer/price`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ url: dbProduct.tcgplayerUrl }),
-          });
-          const d = await r.json();
-          if (d.lowestPrice) { setTcgPrice(parseFloat(d.lowestPrice)); return; }
-        } catch {}
-      }
-      // 2. Fall back to Scryfall price by card ID
-      if (dbProduct?.scryfallId) {
-        try {
-          const r = await fetch(`${API_URL}/api/scryfall/${dbProduct.scryfallId}/price`);
-          const d = await r.json();
-          if (d.usd) { setTcgPrice(parseFloat(d.usd)); return; }
-        } catch {}
-      }
-      // 3. Fall back to stored tcgMarketPriceCents from DB
-      if (dbProduct?.tcgMarketPriceCents) {
-        setTcgPrice(dbProduct.tcgMarketPriceCents / 100);
-      }
+    // Helper: only update state if this fetch hasn't been superseded
+    const commit = (price: number) => {
+      if (fetchGenRef.current === gen) setTcgPrice(price);
+    };
+
+    // 1. TCGPlayer URL → live lowest listing (preferred source)
+    if (tcgplayerUrl) {
+      try {
+        const r = await fetch(`${API_URL}/api/tcgplayer/price`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: tcgplayerUrl }),
+        });
+        const d = await r.json();
+        if (d.lowestPrice) { commit(parseFloat(d.lowestPrice)); return; }
+      } catch {}
+      // If TCGPlayer URL is set but fetch failed, fall back to stored price
+      if (tcgMarketPriceCents) { commit(tcgMarketPriceCents / 100); return; }
     }
 
-    fetchPrice();
+    // 2. Scryfall card price (only when no TCGPlayer URL)
+    if (!tcgplayerUrl && scryfallId) {
+      try {
+        const r = await fetch(`${API_URL}/api/scryfall/${scryfallId}/price`);
+        const d = await r.json();
+        if (d.usd) { commit(parseFloat(d.usd)); return; }
+      } catch {}
+    }
 
-    // Refresh every 5 minutes to stay current
+    // 3. Stored TCG market price from DB
+    if (tcgMarketPriceCents) { commit(tcgMarketPriceCents / 100); }
+  }, [tcgplayerUrl, scryfallId, tcgMarketPriceCents]);
+
+  useEffect(() => {
+    if (!dbProduct) return; // wait until product is loaded
+    fetchPrice();
     if (pollRef.current) clearInterval(pollRef.current);
     pollRef.current = setInterval(fetchPrice, 5 * 60 * 1000);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, [dbProduct?.tcgplayerUrl, dbProduct?.scryfallId, dbProduct?.tcgMarketPriceCents]);
+  }, [fetchPrice, dbProduct]);
 
   const title = dbProduct?.title ?? staticProduct.title;
   const subtitle = dbProduct?.subtitle ?? staticProduct.subtitle;
