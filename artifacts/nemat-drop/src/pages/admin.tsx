@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "";
 const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD ?? "";
@@ -198,8 +198,22 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
   const [lookupLoading, setLookupLoading] = useState(false);
   const [lookupResult, setLookupResult] = useState<LookupResult | null>(null);
   const [lookupError, setLookupError] = useState<string | null>(null);
+  // TCG market price used as reference for auto-calculating discount %
+  const [tcgMarketPrice, setTcgMarketPrice] = useState("");
+  const discountManuallyEdited = useRef(false);
 
   const isEdit = !!product;
+
+  // Auto-calculate discount % from Nemat price and TCG market price
+  useEffect(() => {
+    if (discountManuallyEdited.current) return;
+    const nemat = parseFloat(form.price);
+    const tcg = parseFloat(tcgMarketPrice);
+    if (nemat > 0 && tcg > 0 && tcg >= nemat) {
+      const computed = Math.round((1 - nemat / tcg) * 100);
+      setForm((f) => ({ ...f, discountPercent: String(computed) }));
+    }
+  }, [form.price, tcgMarketPrice]);
 
   async function handleLookup() {
     const url = form.tcgplayerUrl.trim();
@@ -207,6 +221,7 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
     setLookupLoading(true);
     setLookupError(null);
     setLookupResult(null);
+    discountManuallyEdited.current = false;
     try {
       const res = await fetch(`${API_URL}/api/lookup/tcgplayer`, {
         method: "POST",
@@ -216,13 +231,14 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
       const data = await res.json();
       if (!res.ok) { setLookupError(data.error ?? "Lookup failed"); return; }
       setLookupResult(data as LookupResult);
-      // Auto-fill title and scryfallId from result
+      // Auto-fill title, scryfallId, and TCG market price from result
       setForm((f) => ({
         ...f,
         title: f.title || data.suggestedTitle || f.title,
         scryfallId: data.scryfallId ?? f.scryfallId,
         imageUrl: f.imageUrl || data.imageUrl || f.imageUrl,
       }));
+      if (data.usd) setTcgMarketPrice(data.usd);
     } catch (err: any) {
       setLookupError(err.message ?? "Lookup failed");
     } finally {
@@ -345,10 +361,15 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
                 <input required type="number" step="0.01" min="0" value={form.price}
-                  onChange={(e) => setForm({ ...form, price: e.target.value })}
+                  onChange={(e) => { discountManuallyEdited.current = false; setForm({ ...form, price: e.target.value }); }}
                   placeholder="32.00"
                   className="w-full rounded border border-white/10 bg-black pl-8 pr-4 py-3 text-sm focus:outline-none focus:border-cyan-400/40" />
               </div>
+              {tcgMarketPrice && form.price && (
+                <p className="text-[10px] text-cyan-600 mt-1">
+                  Discount auto-computed: {form.discountPercent}% off ${parseFloat(tcgMarketPrice).toFixed(2)} TCG market
+                </p>
+              )}
             </div>
             <div>
               <label className="text-[10px] uppercase tracking-[0.2em] text-gray-600 block mb-1.5">Stock</label>
@@ -440,14 +461,42 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
               <p className="text-[10px] text-gray-600 mt-1">scryfall.com/card/.../&lt;id&gt; — enables live TCG price on storefront.</p>
             </div>
             <div>
-              <label className="text-[10px] uppercase tracking-[0.2em] text-gray-600 block mb-1.5">Nemat Discount %</label>
+              <label className="text-[10px] uppercase tracking-[0.2em] text-gray-600 block mb-1.5">
+                TCG Market Price <span className="text-gray-700 normal-case">(for discount calc)</span>
+              </label>
               <div className="relative">
-                <input type="number" min="0" max="100" value={form.discountPercent}
-                  onChange={(e) => setForm({ ...form, discountPercent: e.target.value })}
-                  className="w-full rounded border border-white/10 bg-black px-4 py-3 text-sm focus:outline-none focus:border-cyan-400/40" />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm">%</span>
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
+                <input type="number" step="0.01" min="0" value={tcgMarketPrice}
+                  onChange={(e) => { discountManuallyEdited.current = false; setTcgMarketPrice(e.target.value); }}
+                  placeholder="auto-filled from lookup"
+                  className="w-full rounded border border-white/10 bg-black pl-8 pr-4 py-3 text-sm focus:outline-none focus:border-cyan-400/40" />
               </div>
-              <p className="text-[10px] text-gray-600 mt-1">Applied to live Scryfall price to calculate storefront savings.</p>
+              <p className="text-[10px] text-gray-600 mt-1">
+                Auto-filled for single cards. For packs, enter the TCGPlayer lowest price manually.
+              </p>
+              {tcgMarketPrice && form.price && (
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-[10px] text-gray-600">Computed discount:</span>
+                  <div className="flex items-center gap-1">
+                    <input type="number" min="0" max="100" value={form.discountPercent}
+                      onChange={(e) => { discountManuallyEdited.current = true; setForm({ ...form, discountPercent: e.target.value }); }}
+                      className="w-16 rounded border border-white/10 bg-black px-2 py-1 text-sm text-cyan-400 font-bold focus:outline-none focus:border-cyan-400/40 text-center" />
+                    <span className="text-sm text-cyan-400">%</span>
+                  </div>
+                  <span className="text-[10px] text-gray-600">(editable)</span>
+                </div>
+              )}
+              {!tcgMarketPrice && (
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-[10px] text-gray-600">Discount %:</span>
+                  <div className="relative flex items-center gap-1">
+                    <input type="number" min="0" max="100" value={form.discountPercent}
+                      onChange={(e) => { discountManuallyEdited.current = true; setForm({ ...form, discountPercent: e.target.value }); }}
+                      className="w-16 rounded border border-white/10 bg-black px-2 py-1 text-sm focus:outline-none focus:border-cyan-400/40 text-center" />
+                    <span className="text-sm text-gray-500">%</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </section>
