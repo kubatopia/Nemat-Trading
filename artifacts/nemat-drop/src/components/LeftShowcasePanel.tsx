@@ -73,8 +73,8 @@ export default function LeftShowcasePanel() {
         {/* Pack image */}
         <div className="relative z-10 w-52 h-72 animate-bounce">
           <img
-            src="/tmnt-booster-nobg.png"
-            alt={product.title}
+            src={dbProduct?.imageUrl || "/tmnt-booster-nobg.png"}
+            alt={dbProduct?.title ?? product.title}
             className="w-full h-full object-contain drop-shadow-[0_0_30px_rgba(34,211,238,0.4)]"
           />
         </div>
