@@ -176,10 +176,12 @@ const emptyForm = {
   scryfallId: "", discountPercent: "15",
 };
 
+const CLOUDINARY_CLOUD = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME ?? "";
+const CLOUDINARY_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET ?? "";
+
 // ─── Image Field ──────────────────────────────────────────────────────────────
 
-function ImageField({ adminKey, value, onChange }: {
-  adminKey: string;
+function ImageField({ value, onChange }: {
   value: string;
   onChange: (url: string) => void;
 }) {
@@ -188,25 +190,29 @@ function ImageField({ adminKey, value, onChange }: {
   const [uploadError, setUploadError] = useState<string | null>(null);
 
   const handleFile = useCallback(async (file: File) => {
+    if (!CLOUDINARY_CLOUD || !CLOUDINARY_PRESET) {
+      setUploadError("Cloudinary env vars not set (VITE_CLOUDINARY_CLOUD_NAME, VITE_CLOUDINARY_UPLOAD_PRESET)");
+      return;
+    }
     setUploading(true);
     setUploadError(null);
     try {
       const fd = new FormData();
-      fd.append("image", file);
-      const res = await fetch(`${API_URL}/api/admin/upload`, {
+      fd.append("file", file);
+      fd.append("upload_preset", CLOUDINARY_PRESET);
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`, {
         method: "POST",
-        headers: { "x-admin-key": adminKey },
         body: fd,
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Upload failed");
-      onChange(data.url);
+      if (!res.ok) throw new Error(data.error?.message ?? "Upload failed");
+      onChange(data.secure_url);
     } catch (err: any) {
       setUploadError(err.message ?? "Upload failed");
     } finally {
       setUploading(false);
     }
-  }, [adminKey, onChange]);
+  }, [onChange]);
 
   function handleDrop(e: React.DragEvent) {
     e.preventDefault();
@@ -487,7 +493,6 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
             )}
 
             <ImageField
-              adminKey={adminKey}
               value={form.imageUrl}
               onChange={(url) => setForm((f) => ({ ...f, imageUrl: url }))}
             />
