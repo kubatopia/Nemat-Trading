@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { product } from "@/data/product";
+import { useActiveProduct } from "@/hooks/useActiveProduct";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "";
 
@@ -8,6 +9,7 @@ function money(cents: number) {
 }
 
 export default function CheckoutPage() {
+  const dbProduct = useActiveProduct();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,7 +23,8 @@ export default function CheckoutPage() {
     };
   }, []);
 
-  const totalCents = product.dropPrice * 100 * qty;
+  const unitCents = dbProduct?.price ?? product.dropPrice * 100;
+  const totalCents = unitCents * qty;
 
   const handlePay = async () => {
     setLoading(true);
@@ -52,7 +55,7 @@ export default function CheckoutPage() {
           <div className="flex items-center justify-between border-b border-white/10 pb-4">
             <div>
               <div className="text-xs uppercase tracking-[0.25em] text-gray-500">Item</div>
-              <div className="text-white">{product.title}</div>
+              <div className="text-white">{dbProduct?.title ?? product.title}</div>
               <div className="text-xs text-gray-500">Qty {qty}</div>
             </div>
             <div className="text-right">
