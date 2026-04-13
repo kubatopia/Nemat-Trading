@@ -35,7 +35,9 @@ export default function CheckoutPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ productId, quantity: qty }),
       });
-      const data = await res.json();
+      const text = await res.text();
+      let data: any;
+      try { data = JSON.parse(text); } catch { throw new Error(`Server error (${res.status}): ${text.slice(0, 200)}`); }
       if (!res.ok) throw new Error(data.error ?? "Checkout failed");
       window.location.href = data.url;
     } catch (err: any) {
