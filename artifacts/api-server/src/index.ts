@@ -35,6 +35,9 @@ async function migrate() {
     ALTER TABLE products ADD COLUMN IF NOT EXISTS discount_percent INTEGER DEFAULT 15;
     ALTER TABLE products ADD COLUMN IF NOT EXISTS tcgplayer_url TEXT DEFAULT '';
     ALTER TABLE products ADD COLUMN IF NOT EXISTS tcg_market_price_cents INTEGER;
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS pull_probabilities TEXT NOT NULL DEFAULT '[]';
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS possible_pulls TEXT NOT NULL DEFAULT '[]';
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS intel_report TEXT NOT NULL DEFAULT '';
   `);
 
   // Seed the default product if the table is empty

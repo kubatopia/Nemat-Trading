@@ -3,6 +3,9 @@ import { useState, useEffect, useRef, useCallback } from "react";
 const API_URL = import.meta.env.VITE_API_URL ?? "";
 const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD ?? "";
 
+type PullProb = { label: string; abbr: string; percent: number; color: string };
+type PossiblePull = { id: number; title: string; subtitle: string; probability: string; scryfallImage: string; featured: boolean };
+
 type Product = {
   id: number;
   title: string;
@@ -16,6 +19,9 @@ type Product = {
   discountPercent: number;
   tcgplayerUrl: string | null;
   tcgMarketPriceCents: number | null;
+  pullProbabilities: string;
+  possiblePulls: string;
+  intelReport: string;
   createdAt: string;
 };
 
@@ -176,6 +182,14 @@ const emptyForm = {
   scryfallId: "", discountPercent: "15",
 };
 
+const DEFAULT_PULL_PROBS: PullProb[] = [
+  { label: "Common", abbr: "C", percent: 27, color: "#6b7280" },
+  { label: "Uncommon", abbr: "U", percent: 23, color: "#60a5fa" },
+  { label: "Rare", abbr: "R", percent: 22, color: "#fbbf24" },
+  { label: "Mythic Rare", abbr: "M", percent: 14, color: "#f97316" },
+  { label: "Borderless", abbr: "B", percent: 9, color: "#a78bfa" },
+];
+
 const CLOUDINARY_CLOUD = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME ?? "";
 const CLOUDINARY_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET ?? "";
 
@@ -289,6 +303,18 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
     discountPercent: String(product.discountPercent ?? 15),
   } : emptyForm);
 
+  const [intelReport, setIntelReport] = useState(product?.intelReport ?? "");
+  const [pullProbs, setPullProbs] = useState<PullProb[]>(
+    product?.pullProbabilities && product.pullProbabilities !== "[]"
+      ? JSON.parse(product.pullProbabilities)
+      : DEFAULT_PULL_PROBS
+  );
+  const [possiblePulls, setPossiblePulls] = useState<PossiblePull[]>(
+    product?.possiblePulls && product.possiblePulls !== "[]"
+      ? JSON.parse(product.possiblePulls)
+      : []
+  );
+
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -360,6 +386,9 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
       discountPercent: parseInt(form.discountPercent, 10) || 15,
       tcgplayerUrl: form.tcgplayerUrl,
       tcgMarketPriceCents: tcgMarketPrice ? Math.round(parseFloat(tcgMarketPrice) * 100) : null,
+      pullProbabilities: pullProbs,
+      possiblePulls: possiblePulls,
+      intelReport,
     };
     try {
       const url = isEdit ? `${API_URL}/api/admin/products/${product.id}` : `${API_URL}/api/admin/products`;
@@ -584,6 +613,95 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
                 className="w-full rounded border border-white/10 bg-black px-4 py-3 text-sm focus:outline-none focus:border-cyan-400/40 font-mono" />
               <p className="text-[10px] text-gray-600 mt-1">scryfall.com/card/.../&lt;id&gt; — fallback for live price on single-card products.</p>
             </div>
+          </div>
+        </section>
+
+        {/* Content */}
+        <section className="border border-white/[0.06] rounded bg-white/[0.02] p-6">
+          <h2 className="text-[10px] uppercase tracking-[0.25em] text-gray-500 mb-5">Content</h2>
+          <div className="grid gap-6">
+
+            {/* Intel Report */}
+            <div>
+              <label className="text-[10px] uppercase tracking-[0.2em] text-gray-600 block mb-1.5">Intel Report</label>
+              <textarea value={intelReport} onChange={(e) => setIntelReport(e.target.value)} rows={6}
+                placeholder={"Write product description paragraphs here.\n\nSeparate paragraphs with a blank line."}
+                className="w-full rounded border border-white/10 bg-black px-4 py-3 text-sm focus:outline-none focus:border-cyan-400/40 resize-y font-sans" />
+              <p className="text-[10px] text-gray-600 mt-1">Separate paragraphs with a blank line. Shown in the Intel Report section on the storefront.</p>
+            </div>
+
+            {/* Pull Probabilities */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-[10px] uppercase tracking-[0.2em] text-gray-600">Pull Probabilities</label>
+                <button type="button" onClick={() => setPullProbs((p) => [...p, { label: "", abbr: "", percent: 0, color: "#6b7280" }])}
+                  className="text-[10px] text-cyan-400 hover:text-cyan-300 transition-colors">+ Add Row</button>
+              </div>
+              <div className="grid gap-2">
+                {pullProbs.map((row, i) => (
+                  <div key={i} className="grid grid-cols-[1fr_60px_70px_80px_32px] gap-2 items-center">
+                    <input value={row.label} onChange={(e) => setPullProbs((p) => p.map((r, j) => j === i ? { ...r, label: e.target.value } : r))}
+                      placeholder="Label (e.g. Common)"
+                      className="rounded border border-white/10 bg-black px-3 py-2 text-xs focus:outline-none focus:border-cyan-400/40" />
+                    <input value={row.abbr} onChange={(e) => setPullProbs((p) => p.map((r, j) => j === i ? { ...r, abbr: e.target.value } : r))}
+                      placeholder="C"
+                      className="rounded border border-white/10 bg-black px-3 py-2 text-xs focus:outline-none focus:border-cyan-400/40 text-center" />
+                    <div className="relative">
+                      <input type="number" min="0" max="100" step="0.1" value={row.percent}
+                        onChange={(e) => setPullProbs((p) => p.map((r, j) => j === i ? { ...r, percent: parseFloat(e.target.value) || 0 } : r))}
+                        className="w-full rounded border border-white/10 bg-black px-3 py-2 pr-6 text-xs focus:outline-none focus:border-cyan-400/40" />
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600 text-xs">%</span>
+                    </div>
+                    <input type="color" value={row.color} onChange={(e) => setPullProbs((p) => p.map((r, j) => j === i ? { ...r, color: e.target.value } : r))}
+                      className="w-full h-9 rounded border border-white/10 bg-black cursor-pointer px-1" />
+                    <button type="button" onClick={() => setPullProbs((p) => p.filter((_, j) => j !== i))}
+                      className="text-gray-600 hover:text-red-400 transition-colors text-lg leading-none">×</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Possible Pulls */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-[10px] uppercase tracking-[0.2em] text-gray-600">Possible Pulls</label>
+                <button type="button" onClick={() => setPossiblePulls((p) => [...p, { id: Date.now(), title: "", subtitle: "", probability: "", scryfallImage: "", featured: false }])}
+                  className="text-[10px] text-cyan-400 hover:text-cyan-300 transition-colors">+ Add Card</button>
+              </div>
+              <div className="grid gap-3">
+                {possiblePulls.map((card, i) => (
+                  <div key={card.id} className="border border-white/[0.06] rounded p-3 grid gap-2">
+                    <div className="grid sm:grid-cols-2 gap-2">
+                      <input value={card.title} onChange={(e) => setPossiblePulls((p) => p.map((c, j) => j === i ? { ...c, title: e.target.value } : c))}
+                        placeholder="Card name"
+                        className="rounded border border-white/10 bg-black px-3 py-2 text-xs focus:outline-none focus:border-cyan-400/40" />
+                      <input value={card.subtitle} onChange={(e) => setPossiblePulls((p) => p.map((c, j) => j === i ? { ...c, subtitle: e.target.value } : c))}
+                        placeholder="e.g. Mythic Rare · Eastman Art"
+                        className="rounded border border-white/10 bg-black px-3 py-2 text-xs focus:outline-none focus:border-cyan-400/40" />
+                    </div>
+                    <div className="grid grid-cols-[1fr_100px_auto_auto] gap-2 items-center">
+                      <input value={card.scryfallImage} onChange={(e) => setPossiblePulls((p) => p.map((c, j) => j === i ? { ...c, scryfallImage: e.target.value } : c))}
+                        placeholder="Scryfall image URL"
+                        className="rounded border border-white/10 bg-black px-3 py-2 text-xs focus:outline-none focus:border-cyan-400/40 font-mono" />
+                      <input value={card.probability} onChange={(e) => setPossiblePulls((p) => p.map((c, j) => j === i ? { ...c, probability: e.target.value } : c))}
+                        placeholder="~2%"
+                        className="rounded border border-white/10 bg-black px-3 py-2 text-xs focus:outline-none focus:border-cyan-400/40" />
+                      <label className="flex items-center gap-1.5 cursor-pointer text-[10px] text-gray-500 whitespace-nowrap">
+                        <input type="checkbox" checked={card.featured} onChange={(e) => setPossiblePulls((p) => p.map((c, j) => j === i ? { ...c, featured: e.target.checked } : c))}
+                          className="accent-cyan-400" />
+                        Featured
+                      </label>
+                      <button type="button" onClick={() => setPossiblePulls((p) => p.filter((_, j) => j !== i))}
+                        className="text-gray-600 hover:text-red-400 transition-colors text-lg leading-none">×</button>
+                    </div>
+                    {card.scryfallImage && (
+                      <img src={card.scryfallImage} alt={card.title} className="h-16 w-12 object-contain rounded border border-white/10" />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
           </div>
         </section>
 

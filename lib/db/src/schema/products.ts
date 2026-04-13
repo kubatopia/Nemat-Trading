@@ -17,6 +17,9 @@ export const productsTable = pgTable("products", {
   discountPercent: integer("discount_percent").notNull().default(15),
   tcgplayerUrl: text("tcgplayer_url").default(""),   // link to TCGPlayer listing
   tcgMarketPriceCents: integer("tcg_market_price_cents"), // cached TCG market price in cents
+  pullProbabilities: text("pull_probabilities").notNull().default("[]"), // JSON array
+  possiblePulls: text("possible_pulls").notNull().default("[]"),         // JSON array
+  intelReport: text("intel_report").notNull().default(""),               // plain text, paragraphs separated by \n\n
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

@@ -1,5 +1,5 @@
-
 import { product } from "@/data/product";
+import { useActiveProduct } from "@/hooks/useActiveProduct";
 
 const SIZE = 220;
 const STROKE = 28;
@@ -8,10 +8,20 @@ const CIRC = 2 * Math.PI * R;
 const GAP = 4;
 
 export default function PullProbabilityChart() {
-  const { pullProbabilities, donutCenter } = product;
+  const dbProduct = useActiveProduct();
 
-  // Build segments
-  let offset = -CIRC / 4; // start from top
+  const pullProbabilities: typeof product.pullProbabilities =
+    dbProduct?.pullProbabilities && dbProduct.pullProbabilities !== "[]"
+      ? JSON.parse(dbProduct.pullProbabilities)
+      : product.pullProbabilities;
+
+  // Auto-derive donut center from highest-percent entry
+  const top = [...pullProbabilities].sort((a, b) => b.percent - a.percent)[0];
+  const donutCenter = top
+    ? { label: top.label, percent: `${top.percent.toFixed(1)}%`, sub: "Standard cards" }
+    : product.donutCenter;
+
+  let offset = -CIRC / 4;
   const segments = pullProbabilities.map((item) => {
     const len = (item.percent / 100) * CIRC - GAP;
     const seg = { ...item, dashLen: len, dashOffset: offset };
@@ -32,25 +42,13 @@ export default function PullProbabilityChart() {
       <h2 className="text-xl font-semibold text-white tracking-wide mb-10">Pull Probability</h2>
 
       <div className="flex flex-col items-center gap-10 md:flex-row md:items-start md:justify-center md:gap-16">
-        {/* Donut Chart */}
         <div className="relative flex-shrink-0" style={{ width: SIZE, height: SIZE }}>
           <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
-            {/* Background ring */}
-            <circle
-              cx={SIZE / 2}
-              cy={SIZE / 2}
-              r={R}
-              fill="none"
-              stroke="#1f2937"
-              strokeWidth={STROKE}
-            />
-            {/* Segments */}
+            <circle cx={SIZE/2} cy={SIZE/2} r={R} fill="none" stroke="#1f2937" strokeWidth={STROKE} />
             {segments.map((seg) => (
               <circle
                 key={seg.label}
-                cx={SIZE / 2}
-                cy={SIZE / 2}
-                r={R}
+                cx={SIZE/2} cy={SIZE/2} r={R}
                 fill="none"
                 stroke={seg.color}
                 strokeWidth={STROKE - 4}
@@ -61,7 +59,6 @@ export default function PullProbabilityChart() {
               />
             ))}
           </svg>
-          {/* Center text */}
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
             <span className="text-xs text-gray-400 uppercase tracking-wider">{donutCenter.label}</span>
             <span className="text-2xl font-bold text-white tabular-nums">{donutCenter.percent}</span>
@@ -69,7 +66,6 @@ export default function PullProbabilityChart() {
           </div>
         </div>
 
-        {/* Legend */}
         <div className="grid grid-cols-2 gap-x-10 gap-y-4 self-center">
           {pullProbabilities.map((item) => (
             <div key={item.label} className="flex items-center gap-3">

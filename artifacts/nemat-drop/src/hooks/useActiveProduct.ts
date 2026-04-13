@@ -6,7 +6,7 @@ export type DbProduct = {
   id: number;
   title: string;
   subtitle: string;
-  price: number; // cents
+  price: number;
   imageUrl: string;
   stock: number;
   active: boolean;
@@ -14,7 +14,10 @@ export type DbProduct = {
   scryfallId: string | null;
   discountPercent: number;
   tcgplayerUrl: string | null;
-  tcgMarketPriceCents: number | null; // cached TCG market price for display
+  tcgMarketPriceCents: number | null;
+  pullProbabilities: string; // JSON array
+  possiblePulls: string;     // JSON array
+  intelReport: string;       // plain text, paragraphs separated by \n\n
 };
 
 let cached: DbProduct | null = null;
