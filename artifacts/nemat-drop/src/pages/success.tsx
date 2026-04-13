@@ -1,6 +1,19 @@
 export default function SuccessPage() {
   return (
-    <main className="min-h-screen bg-black text-white flex items-center justify-center px-6">
+    <main className="min-h-screen bg-black text-white px-6 py-10">
+      {/* Header */}
+      <div className="mx-auto max-w-2xl flex items-center justify-between mb-10">
+        <a href="/" className="flex items-center gap-2 text-xs text-gray-500 hover:text-white transition-colors">
+          <span>←</span><span>Back</span>
+        </a>
+        <div className="flex items-center gap-2">
+          <img src="/wizard.png" alt="Nemat" className="w-6 h-6 object-contain opacity-90" />
+          <span className="text-xs font-bold uppercase tracking-[0.4em] text-white">Nemat</span>
+        </div>
+        <div className="w-12" />
+      </div>
+
+      <div className="flex items-center justify-center">
       <div className="text-center max-w-md">
         <div className="text-5xl mb-6">✓</div>
         <h1 className="text-3xl font-bold text-cyan-400 mb-3">Order Confirmed</h1>
@@ -13,6 +26,7 @@ export default function SuccessPage() {
         >
           Back to Shop
         </a>
+      </div>
       </div>
     </main>
   );

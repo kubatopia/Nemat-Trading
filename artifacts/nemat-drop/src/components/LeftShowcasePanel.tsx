@@ -53,7 +53,8 @@ export default function LeftShowcasePanel() {
       border-r border-white/[0.04]
     ">
       {/* Top bar */}
-      <div className="px-8 pt-8 pb-4 flex justify-center">
+      <div className="px-8 pt-8 pb-4 flex justify-center items-center gap-2">
+        <img src="/wizard.png" alt="Nemat" className="w-6 h-6 object-contain opacity-90" />
         <span className="text-xs font-bold uppercase tracking-[0.4em] text-white">
           {product.brand}
         </span>

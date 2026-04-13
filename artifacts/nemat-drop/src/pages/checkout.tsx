@@ -49,6 +49,18 @@ export default function CheckoutPage() {
   return (
     <main className="min-h-screen bg-black text-white px-6 py-10">
       <div className="mx-auto max-w-2xl">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-10">
+          <a href="/" className="flex items-center gap-2 text-xs text-gray-500 hover:text-white transition-colors">
+            <span>←</span><span>Back</span>
+          </a>
+          <div className="flex items-center gap-2">
+            <img src="/wizard.png" alt="Nemat" className="w-6 h-6 object-contain opacity-90" />
+            <span className="text-xs font-bold uppercase tracking-[0.4em] text-white">Nemat</span>
+          </div>
+          <div className="w-12" />{/* spacer to centre logo */}
+        </div>
+
         <div className="mb-6 text-[10px] uppercase tracking-[0.3em] text-gray-500">Secure Checkout</div>
         <h1 className="text-3xl font-semibold mb-2">Complete your order</h1>
         <p className="text-sm text-gray-400 mb-8">Protected checkout powered by Stripe. Your payment details are processed securely.</p>
