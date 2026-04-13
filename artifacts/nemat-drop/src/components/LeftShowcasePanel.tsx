@@ -47,7 +47,7 @@ export default function LeftShowcasePanel() {
 
   return (
     <aside className="
-      w-full md:w-[420px] md:min-w-[380px] md:max-w-[440px]
+      w-full md:w-[560px] md:min-w-[500px] md:max-w-[580px]
       md:sticky md:top-0 md:h-screen
       bg-black flex flex-col
       border-r border-white/[0.04]
@@ -71,7 +71,7 @@ export default function LeftShowcasePanel() {
           }}
         />
         {/* Pack image */}
-        <div className="relative z-10 w-52 h-72 animate-bounce">
+        <div className="relative z-10 w-80 h-80 animate-bounce">
           <img
             src={dbProduct?.imageUrl || "/tmnt-booster-nobg.png"}
             alt={dbProduct?.title ?? product.title}
