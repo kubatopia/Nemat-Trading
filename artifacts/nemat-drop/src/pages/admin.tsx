@@ -264,6 +264,7 @@ function ImageField({ value, onChange }: {
         </div>
       </div>
       {uploadError && <p className="text-[10px] text-red-400 mt-1">{uploadError}</p>}
+      <p className="text-[9px] text-gray-700 mt-1 font-mono">cloud: {CLOUDINARY_CLOUD || "NOT SET"} · preset: {CLOUDINARY_PRESET || "NOT SET"}</p>
     </div>
   );
 }
