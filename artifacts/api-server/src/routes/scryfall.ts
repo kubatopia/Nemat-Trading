@@ -64,18 +64,39 @@ async function scrapeTCGPlayer(url: string): Promise<{ imageUrl: string | null; 
   };
 
   // TCGPlayer is fully client-side rendered — HTML scraping cannot get live prices.
-  // The pricepoints API (mpapi) returns market price (weighted sales avg).
-  // Lowest listing price requires the official TCGPlayer Partner API.
+  // Strategy: try listings endpoint first (actual lowest active listing), fall back to pricepoints (market avg).
   if (productId) {
+    // 1. Listings endpoint — returns active seller listings; first result is the cheapest
     try {
-      const ppRes = await fetch(
-        `https://mpapi.tcgplayer.com/v2/product/${productId}/pricepoints?mpfev=2`,
+      const listRes = await fetch(
+        `https://mpapi.tcgplayer.com/v2/product/${productId}/listings?mpfev=2&limit=10&offset=0`,
         { headers: mpHeaders }
       );
-      if (ppRes.ok) {
-        lowestPrice = findPriceInJson(await ppRes.json());
+      if (listRes.ok) {
+        const listData = await listRes.json();
+        // listings are sorted ascending by price; grab the first valid price
+        const results: any[] = (listData as any)?.results ?? (listData as any)?.data ?? [];
+        for (const item of results) {
+          const n = typeof item?.price === "number" ? item.price : parseFloat(item?.price);
+          if (!isNaN(n) && n > 0) { lowestPrice = n.toFixed(2); break; }
+        }
+        // also check for a top-level lowestListingPrice field
+        if (!lowestPrice) lowestPrice = findPriceInJson(listData);
       }
     } catch {}
+
+    // 2. Pricepoints fallback — returns market price (weighted sales avg)
+    if (!lowestPrice) {
+      try {
+        const ppRes = await fetch(
+          `https://mpapi.tcgplayer.com/v2/product/${productId}/pricepoints?mpfev=2`,
+          { headers: mpHeaders }
+        );
+        if (ppRes.ok) {
+          lowestPrice = findPriceInJson(await ppRes.json());
+        }
+      } catch {}
+    }
   }
 
   return { imageUrl, lowestPrice };
@@ -124,6 +145,10 @@ router.get("/tcgplayer/debug", async (req, res) => {
     "Accept": "application/json, text/plain, */*",
   };
   const results: Record<string, any> = {};
+  try {
+    const r = await fetch(`https://mpapi.tcgplayer.com/v2/product/${id}/listings?mpfev=2&limit=10&offset=0`, { headers });
+    results.listings = { status: r.status, body: await r.json() };
+  } catch (e: any) { results.listings = { error: e.message }; }
   try {
     const r = await fetch(`https://mpapi.tcgplayer.com/v2/product/${id}/pricepoints?mpfev=2`, { headers });
     results.pricepoints = { status: r.status, body: await r.json() };

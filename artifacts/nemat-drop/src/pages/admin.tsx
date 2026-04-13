@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "";
 const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD ?? "";
@@ -175,6 +175,94 @@ const emptyForm = {
   price: "", stock: "", expiresAt: "",
   scryfallId: "", discountPercent: "15",
 };
+
+// ─── Image Field ──────────────────────────────────────────────────────────────
+
+function ImageField({ adminKey, value, onChange }: {
+  adminKey: string;
+  value: string;
+  onChange: (url: string) => void;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const handleFile = useCallback(async (file: File) => {
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const fd = new FormData();
+      fd.append("image", file);
+      const res = await fetch(`${API_URL}/api/admin/upload`, {
+        method: "POST",
+        headers: { "x-admin-key": adminKey },
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Upload failed");
+      onChange(data.url);
+    } catch (err: any) {
+      setUploadError(err.message ?? "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  }, [adminKey, onChange]);
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file?.type.startsWith("image/")) handleFile(file);
+  }
+
+  return (
+    <div>
+      <label className="text-[10px] uppercase tracking-[0.2em] text-gray-600 block mb-1.5">Image</label>
+      <div className="flex gap-3 items-start">
+        {/* Preview */}
+        {value && (
+          <div className="flex-shrink-0 w-16 h-16 rounded border border-white/10 overflow-hidden bg-white/[0.02] flex items-center justify-center">
+            <img src={value} alt="Product" className="w-full h-full object-contain" />
+          </div>
+        )}
+        <div className="flex-1 flex flex-col gap-2">
+          {/* Drop zone / upload button */}
+          <div
+            onDrop={handleDrop}
+            onDragOver={(e) => e.preventDefault()}
+            className="flex items-center gap-2 rounded border border-dashed border-white/20 px-4 py-3 hover:border-cyan-400/40 transition-colors cursor-pointer"
+            onClick={() => fileRef.current?.click()}
+          >
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }}
+            />
+            {uploading ? (
+              <span className="text-xs text-cyan-400">Uploading...</span>
+            ) : (
+              <>
+                <span className="text-xs text-gray-400">Upload image</span>
+                <span className="text-[10px] text-gray-600">or drag & drop</span>
+              </>
+            )}
+          </div>
+          {/* URL input — still editable for TCGPlayer auto-fill or manual paste */}
+          <input
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="Or paste URL (auto-filled by Look Up)"
+            className="w-full rounded border border-white/10 bg-black px-4 py-2.5 text-xs text-gray-400 focus:outline-none focus:border-cyan-400/40"
+          />
+        </div>
+      </div>
+      {uploadError && <p className="text-[10px] text-red-400 mt-1">{uploadError}</p>}
+    </div>
+  );
+}
+
+// ─── Product Form (New / Edit) ────────────────────────────────────────────────
 
 function ProductForm({ adminKey, product, onBack, onSaved }: {
   adminKey: string;
@@ -398,12 +486,11 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
               </div>
             )}
 
-            <div>
-              <label className="text-[10px] uppercase tracking-[0.2em] text-gray-600 block mb-1.5">Image URL</label>
-              <input value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
-                placeholder="Auto-filled from Look Up, or paste manually"
-                className="w-full rounded border border-white/10 bg-black px-4 py-3 text-sm focus:outline-none focus:border-cyan-400/40" />
-            </div>
+            <ImageField
+              adminKey={adminKey}
+              value={form.imageUrl}
+              onChange={(url) => setForm((f) => ({ ...f, imageUrl: url }))}
+            />
           </div>
         </section>
 

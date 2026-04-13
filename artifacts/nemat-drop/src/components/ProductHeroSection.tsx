@@ -117,10 +117,10 @@ export default function ProductHeroSection() {
           {dbProduct?.tcgplayerUrl ? (
             <a href={dbProduct.tcgplayerUrl} target="_blank" rel="noopener noreferrer"
               className="text-[9px] uppercase tracking-[0.2em] text-gray-600 hover:text-cyan-600 transition-colors mb-1 underline underline-offset-2">
-              TCG Market ↗
+              TCG Low ↗
             </a>
           ) : (
-            <span className="text-[9px] uppercase tracking-[0.2em] text-gray-600 mb-1">TCG Market</span>
+            <span className="text-[9px] uppercase tracking-[0.2em] text-gray-600 mb-1">TCG Low</span>
           )}
           <span className="text-base text-gray-500 line-through">${tcgBest.toFixed(2)}</span>
           {tcgPrice && <span className="text-[8px] text-cyan-600 mt-0.5">Live</span>}
