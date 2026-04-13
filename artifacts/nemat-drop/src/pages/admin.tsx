@@ -523,7 +523,7 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
                   : <span className="text-gray-700 ml-1 normal-case">(manual)</span>}
               </label>
               <div className="relative">
-                <input type="number" min="0" max="100"
+                <input type="number" min="0" max="100" step="0.01"
                   value={form.discountPercent}
                   onChange={(e) => { discountManuallyEdited.current = true; setForm({ ...form, discountPercent: e.target.value }); }}
                   className={`w-full rounded border bg-black px-4 py-3 text-sm focus:outline-none focus:border-cyan-400/40 ${tcgMarketPrice && form.price ? "border-cyan-400/30 text-cyan-400" : "border-white/10"}`} />
