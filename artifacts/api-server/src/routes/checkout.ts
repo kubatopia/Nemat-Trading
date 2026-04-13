@@ -6,10 +6,11 @@ import { eq } from "drizzle-orm";
 const router = Router();
 
 router.post("/checkout", async (req, res) => {
+  console.log("[checkout] body:", JSON.stringify(req.body));
   const { productId, quantity } = req.body as { productId: number; quantity: number };
 
   if (!productId || !quantity || quantity < 1) {
-    res.status(400).json({ error: "productId and quantity are required" });
+    res.status(400).json({ error: `productId and quantity are required (got productId=${productId}, quantity=${quantity})` });
     return;
   }
 
