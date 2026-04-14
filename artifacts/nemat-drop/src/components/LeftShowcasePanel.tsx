@@ -53,7 +53,7 @@ export default function LeftShowcasePanel() {
       border-r border-white/[0.04]
     ">
       {/* Product image — fills all space between top and countdown */}
-      <div className="flex-1 relative min-h-0 px-10 pt-12 pb-4">
+      <div className="flex-1 relative min-h-0 px-10 pt-20 pb-4">
         {/* Glow */}
         <div
           className="absolute inset-0 pointer-events-none"
