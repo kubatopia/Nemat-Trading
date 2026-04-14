@@ -60,19 +60,17 @@ export default function LeftShowcasePanel() {
         </span>
       </div>
 
-      {/* Product image area */}
-      <div className="flex-1 flex items-center justify-center px-8 relative">
+      {/* Product image area — fills all space between header and countdown */}
+      <div className="flex-1 flex flex-col px-8 py-4 relative min-h-0">
         {/* Glow halo */}
         <div
-          className="absolute rounded-full blur-3xl opacity-20 pointer-events-none"
+          className="absolute inset-0 pointer-events-none"
           style={{
-            width: "320px",
-            height: "320px",
-            background: "radial-gradient(circle, #22d3ee 0%, transparent 70%)",
+            background: "radial-gradient(circle at 50% 50%, rgba(34,211,238,0.12) 0%, transparent 70%)",
           }}
         />
-        {/* Pack image */}
-        <div className="relative z-10 w-80 h-80 animate-bounce">
+        {/* Pack image — fills available height */}
+        <div className="relative z-10 flex-1 w-full animate-bounce min-h-0">
           <img
             src={dbProduct?.imageUrl || "/tmnt-booster-nobg.png"}
             alt={dbProduct?.title ?? product.title}
