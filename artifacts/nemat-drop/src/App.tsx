@@ -4,7 +4,6 @@ import CheckoutPage from "@/pages/checkout";
 import SuccessPage from "@/pages/success";
 import AdminPage from "@/pages/admin";
 import { product } from "@/data/product";
-import EmailSignup from "@/components/EmailSignup";
 
 function HomePage() {
   return (
@@ -34,12 +33,6 @@ function HomePage() {
         <RightContentPanel />
       </div>
 
-      {/* Full-width email signup */}
-      <div className="border-t border-white/[0.06] bg-[#0d0d0d]">
-        <div className="max-w-2xl mx-auto px-6 md:px-10">
-          <EmailSignup />
-        </div>
-      </div>
     </div>
   );
 }
