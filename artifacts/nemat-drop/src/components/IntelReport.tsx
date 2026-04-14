@@ -1,21 +1,33 @@
 import { product } from "@/data/product";
 import { useActiveProduct } from "@/hooks/useActiveProduct";
 
-// All highlight words pulled from static data
-const HIGHLIGHTS = product.intelReport.flatMap((p) => p.highlights);
+const HIGHLIGHT_COLORS: Record<string, string> = {
+  "rares":                        "text-amber-400",
+  "mythic rares":                 "text-amber-400",
+  "traditional foils":            "text-amber-400",
+  "full-art lands":               "text-amber-400",
+  "borderless source-material cards": "text-amber-400",
+  "Leonardo":                     "text-blue-400",
+  "Donatello":                    "text-purple-400",
+  "Raphael":                      "text-red-400",
+  "Michelangelo":                 "text-orange-400",
+  "Kevin Eastman":                "text-green-400",
+};
+
+const HIGHLIGHTS = Object.keys(HIGHLIGHT_COLORS);
 
 function highlightText(text: string) {
-  if (!HIGHLIGHTS.length) return <>{text}</>;
   const sorted = [...HIGHLIGHTS].sort((a, b) => b.length - a.length);
   const regex = new RegExp(`(${sorted.map((h) => h.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`, "gi");
   const parts = text.split(regex);
   return (
     <>
-      {parts.map((part, i) =>
-        sorted.some((h) => h.toLowerCase() === part.toLowerCase())
-          ? <strong key={i} className="text-cyan-400 font-semibold">{part}</strong>
-          : <span key={i}>{part}</span>
-      )}
+      {parts.map((part, i) => {
+        const key = HIGHLIGHTS.find((h) => h.toLowerCase() === part.toLowerCase());
+        return key
+          ? <strong key={i} className={`${HIGHLIGHT_COLORS[key]} font-semibold`}>{part}</strong>
+          : <span key={i}>{part}</span>;
+      })}
     </>
   );
 }
