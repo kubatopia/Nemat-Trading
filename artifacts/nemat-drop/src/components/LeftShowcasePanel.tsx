@@ -99,7 +99,7 @@ export default function LeftShowcasePanel() {
           className="absolute inset-0 pointer-events-none"
           style={{ background: "radial-gradient(circle at 50% 50%, rgba(34,211,238,0.12) 0%, transparent 70%)" }}
         />
-        <div className="relative z-10 w-full h-full animate-spin" style={{ animationDuration: "12s", animationTimingFunction: "linear" }}>
+        <div className="relative z-10 w-full h-full animate-turntable" style={{ perspective: "800px" }}>
           <img
             src={dbProduct?.imageUrl || "/tmnt-booster-nobg.png"}
             alt={dbProduct?.title ?? product.title}
