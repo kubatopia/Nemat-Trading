@@ -53,9 +53,9 @@ export default function LeftShowcasePanel() {
       border-r border-white/[0.04]
     ">
       {/* Top bar */}
-      <div className="px-8 pt-8 pb-4 flex justify-center items-center gap-2 flex-shrink-0">
-        <img src="/wizard.png" alt="Nemat" className="w-6 h-6 object-contain opacity-90" />
-        <span className="text-xs font-bold uppercase tracking-[0.4em] text-white">
+      <div className="w-full flex justify-center items-center gap-2 flex-shrink-0 px-8 py-4 border-b border-white/[0.06]">
+        <img src="/wizard.png" alt="Nemat" className="w-5 h-5 object-contain opacity-90" />
+        <span className="text-[11px] font-bold uppercase tracking-[0.4em] text-white">
           {product.brand}
         </span>
       </div>
