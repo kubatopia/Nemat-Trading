@@ -5,9 +5,24 @@
   from { transform: rotateY(0deg); }
   to   { transform: rotateY(360deg); }
 }
+.turntable-scene {
+  perspective: 900px;
+  perspective-origin: 50% 50%;
+}
 .animate-turntable {
   animation: turntable 8s linear infinite;
   transform-style: preserve-3d;
+}
+.turntable-front {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.turntable-back {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: rotateY(180deg);
+  position: absolute;
+  inset: 0;
 }
 @plugin "@tailwindcss/typography";
 
