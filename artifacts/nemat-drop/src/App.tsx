@@ -6,7 +6,7 @@ import AdminPage from "@/pages/admin";
 
 function HomePage() {
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-black">
+    <div className="min-h-screen flex flex-col md:flex-row md:items-stretch bg-black">
       <LeftShowcasePanel />
       <RightContentPanel />
     </div>
