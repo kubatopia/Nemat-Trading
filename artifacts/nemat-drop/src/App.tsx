@@ -9,7 +9,7 @@ function HomePage() {
   return (
     <div className="min-h-screen flex flex-col bg-black">
       {/* Full-width header */}
-      <header className="w-full flex items-center justify-between px-8 py-4 border-b border-white/[0.06] flex-shrink-0">
+      <header className="w-full flex items-center justify-between px-8 py-6 border-b border-white/[0.06] flex-shrink-0">
         <div className="w-24" /> {/* spacer */}
         <div className="flex items-center gap-2">
           <img src="/wizard.png" alt="Nemat" className="w-5 h-5 object-contain opacity-90" />
