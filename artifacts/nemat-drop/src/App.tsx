@@ -9,20 +9,20 @@ function HomePage() {
   return (
     <div className="min-h-screen flex flex-col bg-black">
       {/* Full-width header */}
-      <header className="w-full flex items-center justify-between px-8 py-8 border-b border-white/[0.06] flex-shrink-0 bg-black relative z-20">
-        <div className="w-24" /> {/* spacer */}
+      <header className="w-full flex items-center justify-between px-8 py-[26px] border-b border-white/[0.06] flex-shrink-0 bg-black relative z-20">
+        <div className="w-32" /> {/* spacer */}
         <div className="flex items-center gap-3">
-          <img src="/wizard.png" alt="Nemat" className="w-12 h-12 object-contain opacity-90" />
+          <img src="/wizard.png" alt="Nemat" className="w-16 h-16 object-contain opacity-90" />
           <span className="text-2xl font-bold uppercase tracking-[0.4em] text-white">
             {product.brand}
           </span>
         </div>
-        <div className="w-24 flex justify-end">
+        <div className="w-32 flex justify-end">
           <a
             href="/admin"
-            className="text-[10px] uppercase tracking-[0.2em] text-white hover:text-gray-300 transition-colors"
+            className="px-4 py-2 bg-white text-black text-[11px] font-bold uppercase tracking-[0.15em] rounded hover:bg-gray-200 transition-colors"
           >
-            Admin
+            Admin Login
           </a>
         </div>
       </header>
