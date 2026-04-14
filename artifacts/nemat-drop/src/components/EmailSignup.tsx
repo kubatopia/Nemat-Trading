@@ -1,14 +1,31 @@
 
 import { useState } from "react";
 
+const API_URL = import.meta.env.VITE_API_URL ?? "";
+
 export default function EmailSignup() {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email.trim()) {
+    if (!email.trim()) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_URL}/api/subscribe`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      if (!res.ok) throw new Error("Failed to subscribe");
       setSubmitted(true);
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -29,22 +46,27 @@ export default function EmailSignup() {
             You're on the list. We'll reach out before the next drop.
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="flex gap-0">
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="your@email.com"
-              required
-              className="flex-1 bg-white/[0.03] border border-white/10 border-r-0 rounded-l px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-500/50 transition-colors"
-            />
-            <button
-              type="submit"
-              className="px-6 py-3 bg-cyan-400 text-black text-xs font-bold uppercase tracking-[0.2em] rounded-r hover:bg-cyan-300 active:bg-cyan-500 transition-colors"
-            >
-              Subscribe
-            </button>
-          </form>
+          <div className="flex flex-col gap-2">
+            <form onSubmit={handleSubmit} className="flex gap-0">
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="your@email.com"
+                required
+                disabled={loading}
+                className="flex-1 bg-white/[0.03] border border-white/10 border-r-0 rounded-l px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-500/50 transition-colors disabled:opacity-50"
+              />
+              <button
+                type="submit"
+                disabled={loading}
+                className="px-6 py-3 bg-cyan-400 text-black text-xs font-bold uppercase tracking-[0.2em] rounded-r hover:bg-cyan-300 active:bg-cyan-500 transition-colors disabled:opacity-50"
+              >
+                {loading ? "..." : "Subscribe"}
+              </button>
+            </form>
+            {error && <p className="text-xs text-red-400">{error}</p>}
+          </div>
         )}
       </div>
     </section>

@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
+
+const API_URL = import.meta.env.VITE_API_URL ?? "";
 import { product } from "@/data/product";
 import { useActiveProduct } from "@/hooks/useActiveProduct";
 
@@ -28,7 +30,7 @@ function SideCountdown({ expiresAt }: { expiresAt: string }) {
           {[{ v: time.h, l: "HRS" }, { v: time.m, l: "MIN" }, { v: time.s, l: "SEC" }].map((unit, i) => (
             <div key={unit.l} className="flex items-end">
               <div className="flex flex-col items-center">
-                <span className="text-4xl md:text-5xl font-mono font-bold text-cyan-400 tracking-widest tabular-nums">
+                <span className="text-4xl font-mono font-bold text-cyan-400 tracking-widest tabular-nums">
                   {pad(unit.v)}
                 </span>
                 <span className="text-[10px] uppercase tracking-[0.2em] text-gray-500 mt-1">{unit.l}</span>
@@ -45,12 +47,24 @@ function SideCountdown({ expiresAt }: { expiresAt: string }) {
 function MiniEmailSignup() {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  function handleSubmit(e: React.FormEvent) {
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email.trim()) setSubmitted(true);
-  }
+    if (!email.trim()) return;
+    setLoading(true);
+    try {
+      await fetch(`${API_URL}/api/subscribe`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      setSubmitted(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [email]);
 
   return (
     <div className="w-full border-t border-white/[0.06] pt-4">
@@ -68,13 +82,15 @@ function MiniEmailSignup() {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="your@email.com"
             required
-            className="flex-1 min-w-0 bg-white/[0.03] border border-white/10 border-r-0 rounded-l px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-cyan-500/40 transition-colors"
+            disabled={loading}
+            className="flex-1 min-w-0 bg-white/[0.03] border border-white/10 border-r-0 rounded-l px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-cyan-500/40 transition-colors disabled:opacity-50"
           />
           <button
             type="submit"
-            className="px-4 py-2 bg-cyan-400 text-black text-[10px] font-bold uppercase tracking-[0.15em] rounded-r hover:bg-cyan-300 transition-colors flex-shrink-0"
+            disabled={loading}
+            className="px-4 py-2 bg-cyan-400 text-black text-[10px] font-bold uppercase tracking-[0.15em] rounded-r hover:bg-cyan-300 transition-colors flex-shrink-0 disabled:opacity-50"
           >
-            Notify
+            {loading ? "..." : "Notify"}
           </button>
         </form>
       )}
@@ -88,8 +104,8 @@ export default function LeftShowcasePanel() {
   return (
     <aside className="
       w-full md:w-1/2
-      md:sticky md:top-0 md:h-[calc(100vh-85px)]
-      bg-black flex flex-col
+      md:sticky md:top-0 md:h-screen
+      bg-black flex flex-col overflow-hidden
       border-r border-white/[0.04]
     ">
       {/* Product image — fills all space between top and countdown */}
@@ -119,7 +135,7 @@ export default function LeftShowcasePanel() {
       </div>
 
       {/* Bottom: countdown + email signup */}
-      <div className="px-8 pb-6 pt-4 flex flex-col items-center gap-4 flex-shrink-0">
+      <div className="px-8 pb-5 pt-3 flex flex-col items-center gap-3 flex-shrink-0">
         {dbProduct?.expiresAt ? (
           <SideCountdown expiresAt={dbProduct.expiresAt} />
         ) : (

@@ -4,6 +4,7 @@ import productsRouter from "./products";
 import checkoutRouter from "./checkout";
 import scryfallRouter from "./scryfall";
 import uploadRouter from "./upload";
+import subscribersRouter from "./subscribers";
 
 const router: IRouter = Router();
 
@@ -12,5 +13,6 @@ router.use(productsRouter);
 router.use(checkoutRouter);
 router.use(scryfallRouter);
 router.use(uploadRouter);
+router.use(subscribersRouter);
 
 export default router;

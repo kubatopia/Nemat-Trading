@@ -25,7 +25,7 @@ type Product = {
   createdAt: string;
 };
 
-type View = "list" | "new" | "edit";
+type View = "list" | "new" | "edit" | "subscribers";
 
 function sku(id: number) {
   return `NMT-${String(id).padStart(3, "0")}`;
@@ -48,10 +48,11 @@ function StatusBadge({ product }: { product: Product }) {
 
 // ─── Product List ─────────────────────────────────────────────────────────────
 
-function ProductList({ adminKey, onEdit, onNew }: {
+function ProductList({ adminKey, onEdit, onNew, onSubscribers }: {
   adminKey: string;
   onEdit: (p: Product) => void;
   onNew: () => void;
+  onSubscribers: () => void;
 }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -89,6 +90,12 @@ function ProductList({ adminKey, onEdit, onNew }: {
         </div>
         <div className="flex items-center gap-4">
           <a href="/" className="text-xs text-gray-500 hover:text-white transition-colors">← Storefront</a>
+          <button
+            onClick={onSubscribers}
+            className="text-xs text-gray-500 hover:text-white transition-colors"
+          >
+            Subscribers
+          </button>
           <button
             onClick={onNew}
             className="rounded bg-cyan-400 px-5 py-2.5 text-xs font-bold uppercase tracking-[0.2em] text-black hover:bg-cyan-300 transition-colors"
@@ -692,6 +699,98 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
   );
 }
 
+// ─── Subscriber List ──────────────────────────────────────────────────────────
+
+type Subscriber = { id: number; email: string; subscribedAt: string };
+
+function SubscriberList({ adminKey, onBack }: { adminKey: string; onBack: () => void }) {
+  const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  async function load() {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const res = await fetch(`${API_URL}/api/admin/subscribers`, { headers: { "x-admin-key": adminKey } });
+      if (!res.ok) throw new Error(`API returned ${res.status}`);
+      setSubscribers(await res.json());
+    } catch (err: any) {
+      setLoadError(err.message ?? "Failed to load subscribers");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { load(); }, []);
+
+  function copyAll() {
+    const text = subscribers.map((s) => s.email).join(", ");
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <div className="text-[10px] uppercase tracking-[0.3em] text-gray-500 mb-1">Nemat Trading</div>
+          <h1 className="text-2xl font-bold text-white">Subscribers</h1>
+        </div>
+        <div className="flex items-center gap-4">
+          <button onClick={onBack} className="text-xs text-gray-500 hover:text-white transition-colors">← Products</button>
+          {subscribers.length > 0 && (
+            <button
+              onClick={copyAll}
+              className="rounded border border-white/10 px-4 py-2 text-xs text-gray-300 hover:text-white hover:border-white/30 transition-colors"
+            >
+              {copied ? "Copied!" : `Copy all (${subscribers.length})`}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {loading && <p className="text-gray-600 text-sm text-center py-12">Loading...</p>}
+      {loadError && (
+        <div className="text-center py-12 border border-red-400/20 rounded">
+          <p className="text-red-400 text-sm mb-2">Could not load subscribers</p>
+          <p className="text-gray-600 text-xs font-mono">{loadError}</p>
+          <button onClick={load} className="mt-4 text-xs text-cyan-400 hover:text-cyan-300 transition-colors">Retry</button>
+        </div>
+      )}
+
+      {!loading && !loadError && subscribers.length === 0 && (
+        <div className="text-center py-16 border border-white/[0.06] rounded">
+          <p className="text-gray-600 text-sm">No subscribers yet.</p>
+        </div>
+      )}
+
+      {!loading && subscribers.length > 0 && (
+        <div className="border border-white/[0.06] rounded overflow-hidden">
+          <div className="grid grid-cols-[1fr_auto] gap-4 px-5 py-3 border-b border-white/[0.06] bg-white/[0.02]">
+            <span className="text-[10px] uppercase tracking-[0.2em] text-gray-600">Email</span>
+            <span className="text-[10px] uppercase tracking-[0.2em] text-gray-600">Subscribed</span>
+          </div>
+          {subscribers.map((s, i) => (
+            <div
+              key={s.id}
+              className={`grid grid-cols-[1fr_auto] gap-4 px-5 py-3.5 ${i < subscribers.length - 1 ? "border-b border-white/[0.04]" : ""}`}
+            >
+              <span className="text-sm text-white font-mono">{s.email}</span>
+              <span className="text-xs text-gray-500 whitespace-nowrap">
+                {new Date(s.subscribedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Root Admin ───────────────────────────────────────────────────────────────
 
 export default function AdminPage() {
@@ -738,6 +837,7 @@ export default function AdminPage() {
             adminKey={adminKey}
             onEdit={(p) => { setEditingProduct(p); setView("edit"); }}
             onNew={() => { setEditingProduct(null); setView("new"); }}
+            onSubscribers={() => setView("subscribers")}
           />
         )}
         {(view === "new" || view === "edit") && (
@@ -746,6 +846,12 @@ export default function AdminPage() {
             product={editingProduct}
             onBack={() => setView("list")}
             onSaved={() => setView("list")}
+          />
+        )}
+        {view === "subscribers" && (
+          <SubscriberList
+            adminKey={adminKey}
+            onBack={() => setView("list")}
           />
         )}
       </div>
