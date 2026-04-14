@@ -12,7 +12,7 @@ function HomePage() {
       <header className="w-full flex items-center justify-between px-8 py-[16px] border-b border-white/[0.06] flex-shrink-0 bg-black relative z-20">
         <div className="w-32" /> {/* spacer */}
         <div className="flex items-center gap-3">
-          <img src="/wizard.png" alt="Nemat" className="w-16 h-16 object-contain opacity-90" />
+          <img src="/wizard.png" alt="Nemat" className="w-16 h-16 object-contain opacity-90" style={{ mixBlendMode: "screen" }} />
           <span className="text-2xl font-bold uppercase tracking-[0.4em] text-white">
             {product.brand}
           </span>
