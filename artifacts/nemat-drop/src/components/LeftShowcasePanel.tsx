@@ -48,12 +48,12 @@ export default function LeftShowcasePanel() {
   return (
     <aside className="
       w-full md:w-1/2
-      md:sticky md:top-0 md:h-[calc(100vh-65px)]
+      md:sticky md:top-0 md:h-[calc(100vh-85px)]
       bg-black flex flex-col
       border-r border-white/[0.04]
     ">
       {/* Product image — fills all space between top and countdown */}
-      <div className="flex-1 relative min-h-0 px-10 py-4">
+      <div className="flex-1 relative min-h-0 px-10 pt-12 pb-4">
         {/* Glow */}
         <div
           className="absolute inset-0 pointer-events-none"
