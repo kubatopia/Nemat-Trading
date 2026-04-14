@@ -47,7 +47,7 @@ export default function LeftShowcasePanel() {
 
   return (
     <aside className="
-      w-full md:w-[560px] md:min-w-[500px] md:max-w-[580px]
+      w-full md:min-w-[700px] md:w-[calc(100vw-792px)] md:max-w-[900px]
       md:sticky md:top-0 md:h-screen
       bg-black flex flex-col
       border-r border-white/[0.04]
