@@ -585,36 +585,6 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
           </div>
         </section>
 
-        {/* TCG Reference */}
-        <section className="border border-white/[0.06] rounded bg-white/[0.02] p-6">
-          <h2 className="text-[10px] uppercase tracking-[0.25em] text-gray-500 mb-5">TCG Reference</h2>
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div>
-              <label className="text-[10px] uppercase tracking-[0.2em] text-gray-600 block mb-1.5">
-                TCG Market Price <span className="text-gray-700 normal-case">(for discount calc)</span>
-              </label>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
-                <input type="number" step="0.01" min="0" value={tcgMarketPrice}
-                  onChange={(e) => { discountManuallyEdited.current = false; setTcgMarketPrice(e.target.value); }}
-                  placeholder="Auto-filled from Look Up"
-                  className="w-full rounded border border-white/10 bg-black pl-8 pr-4 py-3 text-sm focus:outline-none focus:border-cyan-400/40" />
-              </div>
-              <p className="text-[10px] text-gray-600 mt-1">
-                Auto-filled from Look Up. For packs, enter the TCGPlayer lowest price if not detected.
-                Storefront price refreshes every 5 min via TCGPlayer URL.
-              </p>
-            </div>
-            <div>
-              <label className="text-[10px] uppercase tracking-[0.2em] text-gray-600 block mb-1.5">Scryfall Card ID <span className="text-gray-700 normal-case">(individual cards)</span></label>
-              <input value={form.scryfallId}
-                onChange={(e) => setForm({ ...form, scryfallId: e.target.value })}
-                placeholder="Auto-filled or paste manually"
-                className="w-full rounded border border-white/10 bg-black px-4 py-3 text-sm focus:outline-none focus:border-cyan-400/40 font-mono" />
-              <p className="text-[10px] text-gray-600 mt-1">scryfall.com/card/.../&lt;id&gt; — fallback for live price on single-card products.</p>
-            </div>
-          </div>
-        </section>
 
         {/* Content */}
         <section className="border border-white/[0.06] rounded bg-white/[0.02] p-6">
