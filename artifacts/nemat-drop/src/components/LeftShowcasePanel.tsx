@@ -48,29 +48,26 @@ export default function LeftShowcasePanel() {
   return (
     <aside className="
       w-full md:w-[560px] md:min-w-[500px] md:max-w-[580px]
-      md:sticky md:top-0 md:min-h-screen md:self-start
+      md:sticky md:top-0 md:h-screen
       bg-black flex flex-col
       border-r border-white/[0.04]
     ">
       {/* Top bar */}
-      <div className="px-8 pt-8 pb-4 flex justify-center items-center gap-2">
+      <div className="px-8 pt-8 pb-4 flex justify-center items-center gap-2 flex-shrink-0">
         <img src="/wizard.png" alt="Nemat" className="w-6 h-6 object-contain opacity-90" />
         <span className="text-xs font-bold uppercase tracking-[0.4em] text-white">
           {product.brand}
         </span>
       </div>
 
-      {/* Product image area — fills all space between header and countdown */}
-      <div className="flex-1 flex flex-col px-8 py-4 relative min-h-0">
-        {/* Glow halo */}
+      {/* Product image — fills all space between header and countdown */}
+      <div className="flex-1 relative min-h-0 px-10 py-4">
+        {/* Glow */}
         <div
           className="absolute inset-0 pointer-events-none"
-          style={{
-            background: "radial-gradient(circle at 50% 50%, rgba(34,211,238,0.12) 0%, transparent 70%)",
-          }}
+          style={{ background: "radial-gradient(circle at 50% 50%, rgba(34,211,238,0.12) 0%, transparent 70%)" }}
         />
-        {/* Pack image — fills available height */}
-        <div className="relative z-10 flex-1 w-full animate-bounce min-h-0">
+        <div className="relative z-10 w-full h-full animate-bounce">
           <img
             src={dbProduct?.imageUrl || "/tmnt-booster-nobg.png"}
             alt={dbProduct?.title ?? product.title}
@@ -79,8 +76,8 @@ export default function LeftShowcasePanel() {
         </div>
       </div>
 
-      {/* Bottom: countdown or Stripe label */}
-      <div className="px-8 pb-8 flex flex-col items-center gap-4">
+      {/* Bottom: countdown */}
+      <div className="px-8 pb-8 pt-4 flex flex-col items-center gap-4 flex-shrink-0">
         {dbProduct?.expiresAt ? (
           <SideCountdown expiresAt={dbProduct.expiresAt} />
         ) : (
