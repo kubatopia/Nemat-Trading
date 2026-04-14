@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { product } from "@/data/product";
 import { useActiveProduct } from "@/hooks/useActiveProduct";
 
@@ -42,6 +42,46 @@ function SideCountdown({ expiresAt }: { expiresAt: string }) {
   );
 }
 
+function MiniEmailSignup() {
+  const [email, setEmail] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (email.trim()) setSubmitted(true);
+  }
+
+  return (
+    <div className="w-full border-t border-white/[0.06] pt-4">
+      <p className="text-[10px] uppercase tracking-[0.25em] text-gray-500 text-center mb-3">
+        Never Miss a Drop
+      </p>
+      {submitted ? (
+        <p className="text-[11px] text-cyan-400 text-center">You're on the list.</p>
+      ) : (
+        <form onSubmit={handleSubmit} className="flex gap-0">
+          <input
+            ref={inputRef}
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="your@email.com"
+            required
+            className="flex-1 min-w-0 bg-white/[0.03] border border-white/10 border-r-0 rounded-l px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-cyan-500/40 transition-colors"
+          />
+          <button
+            type="submit"
+            className="px-4 py-2 bg-cyan-400 text-black text-[10px] font-bold uppercase tracking-[0.15em] rounded-r hover:bg-cyan-300 transition-colors flex-shrink-0"
+          >
+            Notify
+          </button>
+        </form>
+      )}
+    </div>
+  );
+}
+
 export default function LeftShowcasePanel() {
   const dbProduct = useActiveProduct();
 
@@ -68,8 +108,8 @@ export default function LeftShowcasePanel() {
         </div>
       </div>
 
-      {/* Bottom: countdown */}
-      <div className="px-8 pb-8 pt-4 flex flex-col items-center gap-4 flex-shrink-0">
+      {/* Bottom: countdown + email signup */}
+      <div className="px-8 pb-6 pt-4 flex flex-col items-center gap-4 flex-shrink-0">
         {dbProduct?.expiresAt ? (
           <SideCountdown expiresAt={dbProduct.expiresAt} />
         ) : (
@@ -77,6 +117,7 @@ export default function LeftShowcasePanel() {
             Secure checkout powered by Stripe
           </span>
         )}
+        <MiniEmailSignup />
       </div>
     </aside>
   );
