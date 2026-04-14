@@ -2,28 +2,35 @@
 @import "tw-animate-css";
 
 @keyframes turntable {
-  from { transform: rotateY(0deg); }
-  to   { transform: rotateY(360deg); }
+  from { transform: rotateX(-18deg) rotateY(0deg); }
+  to   { transform: rotateX(-18deg) rotateY(360deg); }
 }
 .turntable-scene {
   perspective: 900px;
-  perspective-origin: 50% 50%;
+  perspective-origin: 50% 40%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.animate-turntable {
-  animation: turntable 8s linear infinite;
+.turntable-box {
+  position: relative;
+  width: 200px;
+  height: 280px;
   transform-style: preserve-3d;
+  animation: turntable 10s linear infinite;
 }
-.turntable-front {
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-}
-.turntable-back {
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-  transform: rotateY(180deg);
+.turntable-face {
   position: absolute;
-  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  overflow: hidden;
 }
+.turntable-face.front  { width: 200px; height: 280px; transform: translateZ(14px); }
+.turntable-face.back   { width: 200px; height: 280px; transform: rotateY(180deg) translateZ(14px); }
+.turntable-face.right  { width: 28px;  height: 280px; left: 200px; transform: rotateY(90deg) translateZ(14px) translateX(-14px); background: linear-gradient(to bottom, #1a3a4a, #0d1f2d, #1a3a4a); }
+.turntable-face.left   { width: 28px;  height: 280px; left: -28px; transform: rotateY(-90deg) translateZ(14px) translateX(14px); background: linear-gradient(to bottom, #0d2233, #071520, #0d2233); }
+.turntable-face.top    { width: 200px; height: 28px;  top: -28px;  transform: rotateX(90deg) translateZ(14px) translateY(14px); background: linear-gradient(to right, #0d2233, #1a4a5a, #0d2233); }
+.turntable-face.bottom { width: 200px; height: 28px;  top: 280px;  transform: rotateX(-90deg) translateZ(14px) translateY(-14px); background: linear-gradient(to right, #071520, #0d2233, #071520); }
 @plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:is(.dark *));

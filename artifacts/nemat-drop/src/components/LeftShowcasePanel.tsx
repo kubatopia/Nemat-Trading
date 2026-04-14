@@ -100,21 +100,20 @@ export default function LeftShowcasePanel() {
           style={{ background: "radial-gradient(circle at 50% 50%, rgba(34,211,238,0.12) 0%, transparent 70%)" }}
         />
         <div className="relative z-10 w-full h-full turntable-scene">
-          <div className="w-full h-full animate-turntable relative">
-            {/* Front face */}
-            <img
-              src={dbProduct?.imageUrl || "/tmnt-booster-nobg.png"}
-              alt={dbProduct?.title ?? product.title}
-              className="turntable-front w-full h-full object-contain drop-shadow-[0_0_30px_rgba(34,211,238,0.4)]"
-            />
-            {/* Back face — mirrored so it looks like the rear of the pack */}
-            <img
-              src={dbProduct?.imageUrl || "/tmnt-booster-nobg.png"}
-              alt=""
-              aria-hidden
-              className="turntable-back w-full h-full object-contain drop-shadow-[0_0_30px_rgba(34,211,238,0.4)]"
-              style={{ transform: "rotateY(180deg) scaleX(-1)" }}
-            />
+          <div className="turntable-box drop-shadow-[0_0_40px_rgba(34,211,238,0.35)]">
+            {/* Front */}
+            <div className="turntable-face front">
+              <img src={dbProduct?.imageUrl || "/tmnt-booster-nobg.png"} alt={dbProduct?.title ?? product.title} className="w-full h-full object-cover" />
+            </div>
+            {/* Back */}
+            <div className="turntable-face back">
+              <img src={dbProduct?.imageUrl || "/tmnt-booster-nobg.png"} alt="" aria-hidden className="w-full h-full object-cover" style={{ transform: "scaleX(-1)" }} />
+            </div>
+            {/* Edges */}
+            <div className="turntable-face right" />
+            <div className="turntable-face left" />
+            <div className="turntable-face top" />
+            <div className="turntable-face bottom" />
           </div>
         </div>
       </div>
