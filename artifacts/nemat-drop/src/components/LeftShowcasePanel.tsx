@@ -48,19 +48,11 @@ export default function LeftShowcasePanel() {
   return (
     <aside className="
       w-full md:w-1/2
-      md:sticky md:top-0 md:h-screen
+      md:sticky md:top-0 md:h-[calc(100vh-53px)]
       bg-black flex flex-col
       border-r border-white/[0.04]
     ">
-      {/* Top bar */}
-      <div className="w-full flex justify-center items-center gap-2 flex-shrink-0 px-8 py-4 border-b border-white/[0.06]">
-        <img src="/wizard.png" alt="Nemat" className="w-5 h-5 object-contain opacity-90" />
-        <span className="text-[11px] font-bold uppercase tracking-[0.4em] text-white">
-          {product.brand}
-        </span>
-      </div>
-
-      {/* Product image — fills all space between header and countdown */}
+      {/* Product image — fills all space between top and countdown */}
       <div className="flex-1 relative min-h-0 px-10 py-4">
         {/* Glow */}
         <div
