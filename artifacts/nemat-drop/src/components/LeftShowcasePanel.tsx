@@ -119,11 +119,11 @@ export default function LeftShowcasePanel() {
           <div className="turntable-box drop-shadow-[0_0_40px_rgba(34,211,238,0.35)]">
             {/* Front */}
             <div className="turntable-face front">
-              <img src={dbProduct?.imageUrl || "/tmnt-booster-nobg.png"} alt={dbProduct?.title ?? product.title} className="w-full h-full object-cover" />
+              <img src={dbProduct?.imageUrl || "/tmnt-booster-nobg.png"} alt={dbProduct?.title ?? product.title} className="w-full h-full object-contain" />
             </div>
             {/* Back */}
             <div className="turntable-face back">
-              <img src={dbProduct?.imageUrl || "/tmnt-booster-nobg.png"} alt="" aria-hidden className="w-full h-full object-cover" style={{ transform: "scaleX(-1)" }} />
+              <img src={dbProduct?.imageUrl || "/tmnt-booster-nobg.png"} alt="" aria-hidden className="w-full h-full object-contain" style={{ transform: "scaleX(-1)" }} />
             </div>
             {/* Edges */}
             <div className="turntable-face right" />
