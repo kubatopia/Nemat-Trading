@@ -104,7 +104,7 @@ export default function LeftShowcasePanel() {
   return (
     <aside className="
       w-full md:w-1/2
-      sticky top-0 h-screen
+      sticky top-0 h-screen overflow-hidden
       bg-black flex flex-col
       border-r border-white/[0.04]
     ">
@@ -135,7 +135,7 @@ export default function LeftShowcasePanel() {
       </div>
 
       {/* Bottom: countdown + email signup — always visible */}
-      <div className="px-8 pb-6 pt-4 flex flex-col items-center gap-4 shrink-0">
+      <div className="px-8 pb-6 pt-4 flex flex-col items-center gap-4 shrink-0 min-h-[200px] justify-end">
         {dbProduct?.expiresAt ? (
           <SideCountdown expiresAt={dbProduct.expiresAt} />
         ) : (
