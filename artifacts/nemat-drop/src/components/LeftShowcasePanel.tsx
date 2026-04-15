@@ -104,12 +104,12 @@ export default function LeftShowcasePanel() {
   return (
     <aside className="
       w-full md:w-1/2
-      md:sticky md:top-0 md:h-screen
-      bg-black flex flex-col overflow-hidden
+      sticky top-0 h-screen
+      bg-black flex flex-col
       border-r border-white/[0.04]
     ">
-      {/* Product image — fills all space between top and countdown */}
-      <div className="flex-1 relative min-h-0 px-10 pt-10 pb-4">
+      {/* Product image — fills space above bottom section, never overflows */}
+      <div className="min-h-0 flex-1 relative px-10 pt-8 pb-2 overflow-hidden">
         {/* Glow */}
         <div
           className="absolute inset-0 pointer-events-none"
@@ -134,8 +134,8 @@ export default function LeftShowcasePanel() {
         </div>
       </div>
 
-      {/* Bottom: countdown + email signup */}
-      <div className="px-8 pb-5 pt-3 flex flex-col items-center gap-3 flex-shrink-0">
+      {/* Bottom: countdown + email signup — always visible */}
+      <div className="px-8 pb-6 pt-4 flex flex-col items-center gap-4 shrink-0">
         {dbProduct?.expiresAt ? (
           <SideCountdown expiresAt={dbProduct.expiresAt} />
         ) : (
