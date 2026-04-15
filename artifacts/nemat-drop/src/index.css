@@ -14,8 +14,8 @@
 }
 .turntable-box {
   position: relative;
-  width: 500px;
-  height: 345px;
+  width: 620px;
+  height: 428px;
   transform-style: preserve-3d;
   animation: turntable 10s linear infinite;
 }
@@ -25,12 +25,12 @@
   -webkit-backface-visibility: hidden;
   overflow: hidden;
 }
-.turntable-face.front  { width: 500px; height: 345px; transform: translateZ(18px); }
-.turntable-face.back   { width: 500px; height: 345px; transform: rotateY(180deg) translateZ(18px); }
-.turntable-face.right  { width: 36px;  height: 345px; left: 500px; transform: rotateY(90deg) translateZ(18px) translateX(-18px); background: linear-gradient(to bottom, #1a3a4a, #0d1f2d, #1a3a4a); }
-.turntable-face.left   { width: 36px;  height: 345px; left: -36px; transform: rotateY(-90deg) translateZ(18px) translateX(18px); background: linear-gradient(to bottom, #0d2233, #071520, #0d2233); }
-.turntable-face.top    { width: 500px; height: 36px;  top: -36px;  transform: rotateX(90deg) translateZ(18px) translateY(18px); background: linear-gradient(to right, #0d2233, #1a4a5a, #0d2233); }
-.turntable-face.bottom { width: 500px; height: 36px;  top: 345px;  transform: rotateX(-90deg) translateZ(18px) translateY(-18px); background: linear-gradient(to right, #071520, #0d2233, #071520); }
+.turntable-face.front  { width: 620px; height: 428px; transform: translateZ(20px); }
+.turntable-face.back   { width: 620px; height: 428px; transform: rotateY(180deg) translateZ(20px); }
+.turntable-face.right  { width: 40px;  height: 428px; left: 620px; transform: rotateY(90deg) translateZ(20px) translateX(-20px); background: linear-gradient(to bottom, #1a3a4a, #0d1f2d, #1a3a4a); }
+.turntable-face.left   { width: 40px;  height: 428px; left: -40px; transform: rotateY(-90deg) translateZ(20px) translateX(20px); background: linear-gradient(to bottom, #0d2233, #071520, #0d2233); }
+.turntable-face.top    { width: 620px; height: 40px;  top: -40px;  transform: rotateX(90deg) translateZ(20px) translateY(20px); background: linear-gradient(to right, #0d2233, #1a4a5a, #0d2233); }
+.turntable-face.bottom { width: 620px; height: 40px;  top: 428px;  transform: rotateX(-90deg) translateZ(20px) translateY(-20px); background: linear-gradient(to right, #071520, #0d2233, #071520); }
 @plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:is(.dark *));
