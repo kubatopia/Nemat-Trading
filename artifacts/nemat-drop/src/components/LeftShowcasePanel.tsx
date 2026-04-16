@@ -116,14 +116,17 @@ export default function LeftShowcasePanel() {
           style={{ background: "radial-gradient(circle at 50% 50%, rgba(34,211,238,0.12) 0%, transparent 70%)" }}
         />
         <div className="relative z-10 w-full h-full turntable-scene">
-          <div className="turntable-box drop-shadow-[0_0_40px_rgba(34,211,238,0.35)]">
+          <div
+            className="turntable-box drop-shadow-[0_0_40px_rgba(34,211,238,0.35)] transition-opacity duration-500"
+            style={{ opacity: dbProduct?.imageUrl ? 1 : 0 }}
+          >
             {/* Front */}
             <div className="turntable-face front">
-              <img src={dbProduct?.imageUrl || "/tmnt-booster-nobg.png"} alt={dbProduct?.title ?? product.title} className="w-full h-full object-contain" />
+              <img src={dbProduct?.imageUrl ?? ""} alt={dbProduct?.title ?? ""} className="w-full h-full object-contain" />
             </div>
             {/* Back */}
             <div className="turntable-face back">
-              <img src={dbProduct?.imageUrl || "/tmnt-booster-nobg.png"} alt="" aria-hidden className="w-full h-full object-contain" style={{ transform: "scaleX(-1)" }} />
+              <img src={dbProduct?.imageUrl ?? ""} alt="" aria-hidden className="w-full h-full object-contain" style={{ transform: "scaleX(-1)" }} />
             </div>
             {/* Edges */}
             <div className="turntable-face right" />
