@@ -22,8 +22,8 @@ function dedupeWords(s: string): string {
 /** Recursively search a JSON object for a positive numeric price value at known keys */
 function findPriceInJson(obj: unknown, depth = 0): string | null {
   if (depth > 6 || !obj || typeof obj !== "object") return null;
-  // Prefer market price (matches TCGPlayer displayed price) over individual listing floor
-  const PRICE_KEYS = ["marketPrice", "lowestListingPrice", "directLowPrice", "lowPrice", "lowestPrice"];
+  // Use lowest active listing price — matches TCGPlayer's "as low as" displayed price
+  const PRICE_KEYS = ["lowestListingPrice", "lowestPrice", "directLowPrice", "lowPrice", "marketPrice"];
   for (const key of PRICE_KEYS) {
     const val = (obj as any)[key];
     const n = typeof val === "number" ? val : parseFloat(val);
@@ -64,34 +64,35 @@ async function scrapeTCGPlayer(url: string): Promise<{ imageUrl: string | null; 
   };
 
   // TCGPlayer is fully client-side rendered — HTML scraping cannot get live prices.
-  // Strategy: try pricepoints first (market price = what TCGPlayer displays), fall back to listings.
+  // Strategy: listings endpoint first — returns active seller listings sorted ascending,
+  // so the first result is the current lowest price (matches TCGPlayer's "as low as").
   if (productId) {
-    // 1. Pricepoints — returns market price (matches what TCGPlayer shows on the product page)
+    // 1. Listings — sorted ascending, first entry = lowest active listing price
     try {
-      const ppRes = await fetch(
-        `https://mpapi.tcgplayer.com/v2/product/${productId}/pricepoints?mpfev=2`,
+      const listRes = await fetch(
+        `https://mpapi.tcgplayer.com/v2/product/${productId}/listings?mpfev=2&limit=10&offset=0&sortBy=price&sortDir=asc`,
         { headers: mpHeaders }
       );
-      if (ppRes.ok) {
-        lowestPrice = findPriceInJson(await ppRes.json());
+      if (listRes.ok) {
+        const listData = await listRes.json();
+        const results: any[] = (listData as any)?.results ?? (listData as any)?.data ?? [];
+        for (const item of results) {
+          const n = typeof item?.price === "number" ? item.price : parseFloat(item?.price);
+          if (!isNaN(n) && n > 0) { lowestPrice = n.toFixed(2); break; }
+        }
+        if (!lowestPrice) lowestPrice = findPriceInJson(listData);
       }
     } catch {}
 
-    // 2. Listings fallback — individual seller listings sorted ascending by price
+    // 2. Pricepoints fallback — market average if listings endpoint fails
     if (!lowestPrice) {
       try {
-        const listRes = await fetch(
-          `https://mpapi.tcgplayer.com/v2/product/${productId}/listings?mpfev=2&limit=10&offset=0`,
+        const ppRes = await fetch(
+          `https://mpapi.tcgplayer.com/v2/product/${productId}/pricepoints?mpfev=2`,
           { headers: mpHeaders }
         );
-        if (listRes.ok) {
-          const listData = await listRes.json();
-          const results: any[] = (listData as any)?.results ?? (listData as any)?.data ?? [];
-          for (const item of results) {
-            const n = typeof item?.price === "number" ? item.price : parseFloat(item?.price);
-            if (!isNaN(n) && n > 0) { lowestPrice = n.toFixed(2); break; }
-          }
-          if (!lowestPrice) lowestPrice = findPriceInJson(listData);
+        if (ppRes.ok) {
+          lowestPrice = findPriceInJson(await ppRes.json());
         }
       } catch {}
     }
