@@ -67,7 +67,9 @@ async function scrapeTCGPlayer(url: string): Promise<{ imageUrl: string | null; 
   // Strategy: use mp-search-api POST endpoint which returns real active listings
   // sorted by price ascending, excluding presale listings.
   if (productId) {
-    // 1. Search API — real listings sorted lowest-first, presale excluded
+    // 1. Search API — fetch listings sorted by price, presale excluded.
+    //    Prefer free-shipping listings (shippingPrice === 0, shown as "shipping: included"
+    //    on TCGPlayer) since those are all-in prices with no hidden shipping costs.
     try {
       const searchRes = await fetch(
         `https://mp-search-api.tcgplayer.com/v1/product/${productId}/listings`,
@@ -81,7 +83,7 @@ async function scrapeTCGPlayer(url: string): Promise<{ imageUrl: string | null; 
               exclude: { channelExclusion: 0, sellerPrograms: ["Presale"] },
             },
             from: 0,
-            size: 1,
+            size: 30,
             sort: { field: "price", order: "asc" },
             context: { shippingCountry: "US", cart: {} },
           }),
@@ -90,9 +92,12 @@ async function scrapeTCGPlayer(url: string): Promise<{ imageUrl: string | null; 
       if (searchRes.ok) {
         const searchData = await searchRes.json();
         const results: any[] = searchData?.results?.[0]?.results ?? [];
-        if (results[0]?.price) {
-          const n = typeof results[0].price === "number" ? results[0].price : parseFloat(results[0].price);
-          if (!isNaN(n) && n > 0) lowestPrice = n.toFixed(2);
+        // Prefer the lowest free-shipping listing ("shipping: included" on TCGPlayer)
+        const freeShipping = results.filter((r: any) => r.shippingPrice === 0 || r.rankedShippingPrice === 0);
+        const candidates = freeShipping.length > 0 ? freeShipping : results;
+        for (const item of candidates) {
+          const n = typeof item.price === "number" ? item.price : parseFloat(item.price);
+          if (!isNaN(n) && n > 0) { lowestPrice = n.toFixed(2); break; }
         }
       }
     } catch {}
