@@ -87,12 +87,8 @@ export default function ProductHeroSection() {
   // Nemat price is FIXED — always the stored DB price, never fluctuates with TCG
   const nematPrice = dbProduct ? dbProduct.price / 100 : staticProduct.dropPrice;
 
-  // TCG Best: prefer the admin-stored market price (set by looking at TCGPlayer),
-  // fall back to live fetch only if admin hasn't set one
-  const storedPrice = dbProduct?.tcgMarketPriceCents ? dbProduct.tcgMarketPriceCents / 100 : null;
-  const tcgBest = storedPrice
-    ?? tcgPrice
-    ?? staticProduct.tcgBestPrice;
+  // TCG Best: live fetch first, fall back to static
+  const tcgBest = tcgPrice ?? staticProduct.tcgBestPrice;
 
   // Savings calculated dynamically: how much cheaper are we vs current TCG market price
   const savings = tcgBest > nematPrice
@@ -125,7 +121,7 @@ export default function ProductHeroSection() {
             <span className="text-[9px] uppercase tracking-[0.2em] text-gray-600 mb-1">TCG Low</span>
           )}
           <span className="text-base text-gray-500 line-through">${tcgBest.toFixed(2)}</span>
-          {tcgPrice && !storedPrice && <span className="text-[8px] text-cyan-600 mt-0.5">Live</span>}
+          {tcgPrice && <span className="text-[8px] text-cyan-600 mt-0.5">Live</span>}
         </div>
         <div className="flex flex-col items-center py-4 px-3 border-r border-white/[0.06] bg-cyan-400/[0.05]">
           <span className="text-[9px] uppercase tracking-[0.2em] text-cyan-400 mb-1">Today's Drop</span>
