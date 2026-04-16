@@ -64,27 +64,40 @@ async function scrapeTCGPlayer(url: string): Promise<{ imageUrl: string | null; 
   };
 
   // TCGPlayer is fully client-side rendered — HTML scraping cannot get live prices.
-  // Strategy: listings endpoint first — returns active seller listings sorted ascending,
-  // so the first result is the current lowest price (matches TCGPlayer's "as low as").
+  // Strategy: use mp-search-api POST endpoint which returns real active listings
+  // sorted by price ascending, excluding presale listings.
   if (productId) {
-    // 1. Listings — sorted ascending, first entry = lowest active listing price
+    // 1. Search API — real listings sorted lowest-first, presale excluded
     try {
-      const listRes = await fetch(
-        `https://mpapi.tcgplayer.com/v2/product/${productId}/listings?mpfev=2&limit=10&offset=0&sortBy=price&sortDir=asc`,
-        { headers: mpHeaders }
-      );
-      if (listRes.ok) {
-        const listData = await listRes.json();
-        const results: any[] = (listData as any)?.results ?? (listData as any)?.data ?? [];
-        for (const item of results) {
-          const n = typeof item?.price === "number" ? item.price : parseFloat(item?.price);
-          if (!isNaN(n) && n > 0) { lowestPrice = n.toFixed(2); break; }
+      const searchRes = await fetch(
+        `https://mp-search-api.tcgplayer.com/v1/product/${productId}/listings`,
+        {
+          method: "POST",
+          headers: { ...mpHeaders, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            filters: {
+              term: { sellerStatus: "Live", channelId: 0 },
+              range: { quantity: { gte: 1 } },
+              exclude: { channelExclusion: 0, sellerPrograms: ["Presale"] },
+            },
+            from: 0,
+            size: 1,
+            sort: { field: "price", order: "asc" },
+            context: { shippingCountry: "US", cart: {} },
+          }),
         }
-        if (!lowestPrice) lowestPrice = findPriceInJson(listData);
+      );
+      if (searchRes.ok) {
+        const searchData = await searchRes.json();
+        const results: any[] = searchData?.results?.[0]?.results ?? [];
+        if (results[0]?.price) {
+          const n = typeof results[0].price === "number" ? results[0].price : parseFloat(results[0].price);
+          if (!isNaN(n) && n > 0) lowestPrice = n.toFixed(2);
+        }
       }
     } catch {}
 
-    // 2. Pricepoints fallback — market average if listings endpoint fails
+    // 2. Pricepoints fallback — market average if search API fails
     if (!lowestPrice) {
       try {
         const ppRes = await fetch(
