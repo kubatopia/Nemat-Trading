@@ -13,7 +13,7 @@ function HomePage() {
         <div className="w-12 md:w-32" /> {/* spacer */}
         <div className="flex items-center gap-2 md:gap-3">
           <img src="/wizard.png" alt="Nemat" className="w-8 h-8 md:w-16 md:h-16 object-contain opacity-90" />
-          <span className="text-base md:text-2xl font-bold uppercase tracking-[0.3em] md:tracking-[0.4em] text-white">
+          <span className="text-base md:text-2xl font-bold tracking-[0.05em] text-white">
             {product.brand}
           </span>
         </div>

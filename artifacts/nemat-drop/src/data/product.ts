@@ -4,7 +4,7 @@
 
 export const product = {
   // ── Brand ──────────────────────────────────────────────────────────────────
-  brand: "NEMAT",
+  brand: "Tommy Top Decker Trading",
 
   // ── Product ────────────────────────────────────────────────────────────────
   title: "Teenage Mutant Ninja Turtles",
