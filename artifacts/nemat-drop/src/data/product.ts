@@ -7,6 +7,7 @@ export const product = {
   brand: "Tommy Top Decker Trading",
 
   // ── Product ────────────────────────────────────────────────────────────────
+  imageUrl: "/product.png",
   title: "Teenage Mutant Ninja Turtles",
   subtitle: "Collector Booster Pack",
   status: "FLASH DROP // ACTIVE",

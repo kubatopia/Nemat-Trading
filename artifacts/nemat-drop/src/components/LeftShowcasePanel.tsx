@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 const API_URL = import.meta.env.VITE_API_URL ?? "";
 import { product } from "@/data/product";
 import { useActiveProduct } from "@/hooks/useActiveProduct";
+import { product as staticProduct } from "@/data/product";
 
 function getTimeLeft(iso: string) {
   const diff = Math.max(0, new Date(iso).getTime() - Date.now());
@@ -117,16 +118,15 @@ export default function LeftShowcasePanel() {
         />
         <div className="relative z-10 w-full h-full turntable-scene">
           <div
-            className="turntable-box drop-shadow-[0_0_40px_rgba(34,211,238,0.35)] transition-opacity duration-500"
-            style={{ opacity: dbProduct?.imageUrl ? 1 : 0 }}
+            className="turntable-box drop-shadow-[0_0_40px_rgba(34,211,238,0.35)]"
           >
             {/* Front */}
             <div className="turntable-face front">
-              <img src={dbProduct?.imageUrl ?? ""} alt={dbProduct?.title ?? ""} className="w-full h-full object-contain" />
+              <img src={dbProduct?.imageUrl ?? staticProduct.imageUrl} alt={dbProduct?.title ?? staticProduct.title} className="w-full h-full object-contain" />
             </div>
             {/* Back */}
             <div className="turntable-face back">
-              <img src={dbProduct?.imageUrl ?? ""} alt="" aria-hidden className="w-full h-full object-contain" style={{ transform: "scaleX(-1)" }} />
+              <img src={dbProduct?.imageUrl ?? staticProduct.imageUrl} alt="" aria-hidden className="w-full h-full object-contain" style={{ transform: "scaleX(-1)" }} />
             </div>
             {/* Edges */}
             <div className="turntable-face right" />
