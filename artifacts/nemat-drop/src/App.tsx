@@ -9,18 +9,18 @@ function HomePage() {
   return (
     <div className="min-h-screen md:h-screen md:overflow-hidden flex flex-col bg-black">
       {/* Full-width header */}
-      <header className="w-full flex items-center justify-between px-8 py-[6px] border-b border-white/[0.06] shrink-0 bg-black relative z-20">
-        <div className="w-32" /> {/* spacer */}
-        <div className="flex items-center gap-3">
-          <img src="/wizard.png" alt="Nemat" className="w-16 h-16 object-contain opacity-90" />
-          <span className="text-2xl font-bold uppercase tracking-[0.4em] text-white">
+      <header className="w-full flex items-center justify-between px-4 md:px-8 py-[6px] border-b border-white/[0.06] shrink-0 bg-black relative z-20">
+        <div className="w-12 md:w-32" /> {/* spacer */}
+        <div className="flex items-center gap-2 md:gap-3">
+          <img src="/wizard.png" alt="Nemat" className="w-8 h-8 md:w-16 md:h-16 object-contain opacity-90" />
+          <span className="text-base md:text-2xl font-bold uppercase tracking-[0.3em] md:tracking-[0.4em] text-white">
             {product.brand}
           </span>
         </div>
-        <div className="w-32 flex justify-end">
+        <div className="w-12 md:w-32 flex justify-end">
           <a
             href="/admin"
-            className="px-4 py-2 bg-white text-black text-[11px] font-bold uppercase tracking-[0.15em] rounded hover:bg-gray-200 transition-colors"
+            className="px-2 py-1 md:px-4 md:py-2 bg-white text-black text-[10px] md:text-[11px] font-bold uppercase tracking-[0.15em] rounded hover:bg-gray-200 transition-colors"
           >
             Admin
           </a>
