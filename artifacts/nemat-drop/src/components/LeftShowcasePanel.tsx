@@ -116,24 +116,12 @@ export default function LeftShowcasePanel() {
           className="absolute inset-0 pointer-events-none"
           style={{ background: "radial-gradient(circle at 50% 50%, rgba(34,211,238,0.12) 0%, transparent 70%)" }}
         />
-        <div className="relative z-10 w-full h-full turntable-scene">
-          <div
-            className="turntable-box drop-shadow-[0_0_40px_rgba(34,211,238,0.35)]"
-          >
-            {/* Front */}
-            <div className="turntable-face front">
-              <img src={dbProduct?.imageUrl ?? staticProduct.imageUrl} alt={dbProduct?.title ?? staticProduct.title} className="w-full h-full object-contain" />
-            </div>
-            {/* Back */}
-            <div className="turntable-face back">
-              <img src={dbProduct?.imageUrl ?? staticProduct.imageUrl} alt="" aria-hidden className="w-full h-full object-contain" style={{ transform: "scaleX(-1)" }} />
-            </div>
-            {/* Edges */}
-            <div className="turntable-face right" />
-            <div className="turntable-face left" />
-            <div className="turntable-face top" />
-            <div className="turntable-face bottom" />
-          </div>
+        <div className="relative z-10 w-full h-full flex items-center justify-center">
+          <img
+            src={dbProduct?.imageUrl ?? staticProduct.imageUrl}
+            alt={dbProduct?.title ?? staticProduct.title}
+            className="w-full h-full object-contain drop-shadow-[0_0_40px_rgba(34,211,238,0.4)]"
+          />
         </div>
       </div>
 
