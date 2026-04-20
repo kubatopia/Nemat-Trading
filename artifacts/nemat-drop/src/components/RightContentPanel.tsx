@@ -10,8 +10,8 @@ export default function RightContentPanel() {
     <main className="flex-1 min-w-0 bg-[#0d0d0d] overflow-y-auto h-full">
       <div className="max-w-2xl mx-auto px-6 md:px-10 pt-10 pb-0">
         <ProductHeroSection />
-        <IntelReport />
         <ProductSpecifications />
+        <IntelReport />
         <PullProbabilityChart />
         <PossiblePullsGrid />
 

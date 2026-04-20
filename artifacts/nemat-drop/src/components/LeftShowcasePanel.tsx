@@ -104,12 +104,12 @@ export default function LeftShowcasePanel() {
   return (
     <aside className="
       w-full md:w-1/2
-      h-full overflow-hidden
+      md:h-full overflow-hidden
       bg-black flex flex-col
       border-r border-white/[0.04]
     ">
       {/* Product image — fills space above bottom section, never overflows */}
-      <div className="min-h-0 flex-1 relative px-10 pt-8 pb-2 overflow-hidden">
+      <div className="h-72 md:min-h-0 md:flex-1 relative px-10 pt-8 pb-2 overflow-hidden">
         {/* Glow */}
         <div
           className="absolute inset-0 pointer-events-none"

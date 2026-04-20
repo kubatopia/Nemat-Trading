@@ -31,6 +31,16 @@
 .turntable-face.left   { width: 40px;  height: 428px; left: -40px; transform: rotateY(-90deg) translateZ(20px) translateX(20px); background: linear-gradient(to bottom, #0d2233, #071520, #0d2233); }
 .turntable-face.top    { width: 620px; height: 40px;  top: -40px;  transform: rotateX(90deg) translateZ(20px) translateY(20px); background: linear-gradient(to right, #0d2233, #1a4a5a, #0d2233); }
 .turntable-face.bottom { width: 620px; height: 40px;  top: 428px;  transform: rotateX(-90deg) translateZ(20px) translateY(-20px); background: linear-gradient(to right, #071520, #0d2233, #071520); }
+@media (max-width: 767px) {
+  .turntable-scene { perspective: 400px; }
+  .turntable-box { width: 260px; height: 180px; }
+  .turntable-face.front  { width: 260px; height: 180px; transform: translateZ(8px); }
+  .turntable-face.back   { width: 260px; height: 180px; transform: rotateY(180deg) translateZ(8px); }
+  .turntable-face.right  { width: 17px; height: 180px; left: 260px; transform: rotateY(90deg) translateZ(8px) translateX(-8px); }
+  .turntable-face.left   { width: 17px; height: 180px; left: -17px; transform: rotateY(-90deg) translateZ(8px) translateX(8px); }
+  .turntable-face.top    { width: 260px; height: 17px; top: -17px;  transform: rotateX(90deg) translateZ(8px) translateY(8px); }
+  .turntable-face.bottom { width: 260px; height: 17px; top: 180px;  transform: rotateX(-90deg) translateZ(8px) translateY(-8px); }
+}
 @plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:is(.dark *));

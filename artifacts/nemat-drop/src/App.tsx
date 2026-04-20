@@ -7,7 +7,7 @@ import { product } from "@/data/product";
 
 function HomePage() {
   return (
-    <div className="h-screen overflow-hidden flex flex-col bg-black">
+    <div className="min-h-screen md:h-screen md:overflow-hidden flex flex-col bg-black">
       {/* Full-width header */}
       <header className="w-full flex items-center justify-between px-8 py-[6px] border-b border-white/[0.06] shrink-0 bg-black relative z-20">
         <div className="w-32" /> {/* spacer */}
@@ -28,7 +28,7 @@ function HomePage() {
       </header>
 
       {/* Two-panel layout */}
-      <div className="flex flex-col md:flex-row flex-1 min-h-0">
+      <div className="flex flex-col md:flex-row md:flex-1 md:min-h-0">
         <LeftShowcasePanel />
         <RightContentPanel />
       </div>
