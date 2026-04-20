@@ -19,8 +19,8 @@ export default function RightContentPanel() {
         <div className="h-24" />
       </div>
 
-      {/* Sticky purchase bar */}
-      <div className="sticky bottom-0 max-w-2xl mx-auto px-6 md:px-10">
+      {/* Fixed on mobile, sticky on desktop */}
+      <div className="fixed md:sticky bottom-0 inset-x-0 md:inset-x-auto z-50 md:z-10 md:max-w-2xl md:mx-auto px-6 md:px-10">
         <PurchaseBar />
       </div>
     </main>
