@@ -17,7 +17,7 @@
   width: 620px;
   height: 428px;
   transform-style: preserve-3d;
-  animation: turntable 10s linear infinite;
+  transform: rotateX(-18deg) rotateY(-30deg);
 }
 .turntable-face {
   position: absolute;
