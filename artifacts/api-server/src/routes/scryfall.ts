@@ -226,15 +226,39 @@ async function scrapeProductPage(url: string): Promise<{ intelReport: string | n
     let intelReport: string | null = null;
     let contents: string[] | null = null;
 
-    // Strategy 1: JSON-LD structured data (required for Google SEO — most reliable)
+    // Recursively find a field by key name anywhere in a JSON object
+    function findByKey(obj: any, keys: string[], depth = 0): string | null {
+      if (depth > 12 || !obj || typeof obj !== "object") return null;
+      for (const k of Object.keys(obj)) {
+        if (keys.includes(k.toLowerCase()) && typeof obj[k] === "string" && obj[k].length > 80) {
+          return obj[k];
+        }
+        const found = findByKey(obj[k], keys, depth + 1);
+        if (found) return found;
+      }
+      return null;
+    }
+
+    function findArrayByKey(obj: any, keys: string[], depth = 0): any[] | null {
+      if (depth > 12 || !obj || typeof obj !== "object") return null;
+      for (const k of Object.keys(obj)) {
+        if (keys.includes(k.toLowerCase()) && Array.isArray(obj[k]) && obj[k].length) return obj[k];
+        const found = findArrayByKey(obj[k], keys, depth + 1);
+        if (found) return found;
+      }
+      return null;
+    }
+
+    // Strategy 1: JSON-LD structured data
     const jsonLdBlocks = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/gi)];
     for (const block of jsonLdBlocks) {
       try {
         const data = JSON.parse(block[1]);
         const entries = Array.isArray(data) ? data : [data];
         for (const entry of entries) {
-          const desc = entry.description ?? entry.offers?.description ?? null;
-          if (desc && desc.length > 80) {
+          const desc = entry.description ?? null;
+          // Skip generic site-wide descriptions
+          if (desc && desc.length > 80 && !desc.toLowerCase().includes("yu-gi-oh") && !desc.toLowerCase().includes("pokémon cards, one piece")) {
             intelReport = stripHtml(String(desc));
             break;
           }
@@ -243,38 +267,52 @@ async function scrapeProductPage(url: string): Promise<{ intelReport: string | n
       if (intelReport) break;
     }
 
-    // Strategy 2: __NEXT_DATA__ extendedData fields
+    // Strategy 2: __NEXT_DATA__ — deep recursive search for description/contents fields
     if (!intelReport) {
       const nextDataMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
       if (nextDataMatch) {
         try {
           const nextData = JSON.parse(nextDataMatch[1]);
-          const pageProps = nextData?.props?.pageProps ?? {};
-          const product = pageProps.product ?? pageProps.productDetails ?? pageProps.details ?? null;
-          const extendedData: any[] = product?.extendedData ?? product?.extended_data ?? [];
 
+          // Try extendedData array pattern first
+          const extendedData: any[] = findArrayByKey(nextData, ["extendeddata", "extended_data"]) ?? [];
           for (const item of extendedData) {
             const name = (item.name ?? item.displayName ?? "").toLowerCase();
             const value = String(item.value ?? "");
             if (!value) continue;
             if (name.includes("description") || name.includes("product detail")) {
               const text = stripHtml(value);
-              if (text) intelReport = text;
+              if (text.length > 80) intelReport = text;
             }
             if (name.includes("content")) {
               const lines = stripHtml(value).split("\n").map((s: string) => s.trim()).filter(Boolean);
               if (lines.length) contents = lines;
             }
           }
+
+          // Fall back to any deep "description" field that isn't a generic blurb
+          if (!intelReport) {
+            const desc = findByKey(nextData, ["description", "longdescription", "productdescription", "extendeddescription"]);
+            if (desc && !desc.toLowerCase().includes("yu-gi-oh")) {
+              intelReport = stripHtml(desc);
+            }
+          }
         } catch {}
       }
     }
 
-    // Strategy 3: meta description tag as last resort
+    // Strategy 3: scan raw HTML for JSON-encoded description strings
     if (!intelReport) {
-      const metaMatch = html.match(/<meta\s+name="description"\s+content="([^"]{80,})"/i)
-        ?? html.match(/<meta\s+content="([^"]{80,})"\s+name="description"/i);
-      if (metaMatch) intelReport = metaMatch[1].trim();
+      const matches = [...html.matchAll(/"description"\s*:\s*"((?:[^"\\]|\\.){100,})"/g)];
+      for (const m of matches) {
+        try {
+          const text = JSON.parse(`"${m[1]}"`); // unescape JSON string
+          if (!text.toLowerCase().includes("yu-gi-oh") && !text.toLowerCase().includes("pokémon cards, one piece")) {
+            intelReport = stripHtml(text);
+            break;
+          }
+        } catch {}
+      }
     }
 
     return { intelReport, contents };
