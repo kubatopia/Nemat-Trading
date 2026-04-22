@@ -333,6 +333,89 @@ function ImageField({ value, onChange }: {
   );
 }
 
+// ─── Pull Card Editor ─────────────────────────────────────────────────────────
+
+function PullCardEditor({ card, onChange, onDelete }: {
+  card: PossiblePull;
+  onChange: (c: PossiblePull) => void;
+  onDelete: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+
+  return (
+    <div className="flex flex-col">
+      <div className={`relative group aspect-[2.5/3.5] rounded-lg overflow-hidden border transition-all duration-200 ${card.featured ? "border-cyan-400/60 shadow-[0_0_20px_rgba(34,211,238,0.2)]" : "border-white/10 hover:border-white/20"}`}>
+        {card.scryfallImage ? (
+          <img src={card.scryfallImage} alt={card.title} className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full bg-white/[0.03] flex items-center justify-center">
+            <span className="text-gray-700 text-[10px] text-center px-3 leading-relaxed">{card.title || "No image"}</span>
+          </div>
+        )}
+
+        {/* Featured toggle — top right, always visible */}
+        <button
+          type="button"
+          onClick={() => onChange({ ...card, featured: !card.featured })}
+          title={card.featured ? "Featured — click to unfeature" : "Click to feature"}
+          className={`absolute top-1.5 right-1.5 w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold shadow transition-all ${card.featured ? "bg-cyan-400 text-black" : "bg-black/70 text-gray-500 hover:text-cyan-400 hover:bg-black/90"}`}
+        >
+          ★
+        </button>
+
+        {/* Delete — top left, on hover */}
+        <button
+          type="button"
+          onClick={onDelete}
+          className="absolute top-1.5 left-1.5 w-7 h-7 rounded-full bg-black/70 text-gray-500 hover:text-red-400 hover:bg-black/90 flex items-center justify-center text-base transition-all opacity-0 group-hover:opacity-100"
+        >
+          ×
+        </button>
+
+        {/* Edit — bottom right, on hover */}
+        <button
+          type="button"
+          onClick={() => setEditing(e => !e)}
+          className="absolute bottom-1.5 right-1.5 text-[9px] uppercase tracking-wider bg-black/70 hover:bg-black/90 px-2 py-1 rounded text-gray-400 hover:text-white transition-all opacity-0 group-hover:opacity-100"
+        >
+          {editing ? "Done" : "Edit"}
+        </button>
+      </div>
+
+      {/* Card info */}
+      <div className="mt-1.5 px-0.5">
+        <p className={`text-xs font-medium leading-tight truncate ${card.featured ? "text-cyan-400" : "text-gray-300"}`}>
+          {card.title || <span className="text-gray-700 italic">Untitled</span>}
+        </p>
+        <div className="flex items-center justify-between">
+          <p className="text-[10px] text-gray-600 truncate">{card.subtitle}</p>
+          <p className="text-[10px] text-gray-500 shrink-0 ml-1">{card.probability}</p>
+        </div>
+      </div>
+
+      {/* Inline edit fields — shown when editing */}
+      {editing && (
+        <div className="mt-2 grid gap-1.5 border border-white/[0.06] rounded-lg p-3 bg-white/[0.02]">
+          <input value={card.title} onChange={e => onChange({ ...card, title: e.target.value })}
+            placeholder="Card name"
+            className="w-full rounded border border-white/10 bg-black px-2.5 py-1.5 text-xs focus:outline-none focus:border-cyan-400/40" />
+          <div className="grid grid-cols-2 gap-1.5">
+            <input value={card.subtitle} onChange={e => onChange({ ...card, subtitle: e.target.value })}
+              placeholder="Rarity"
+              className="rounded border border-white/10 bg-black px-2.5 py-1.5 text-xs focus:outline-none focus:border-cyan-400/40" />
+            <input value={card.probability} onChange={e => onChange({ ...card, probability: e.target.value })}
+              placeholder="~2%"
+              className="rounded border border-white/10 bg-black px-2.5 py-1.5 text-xs focus:outline-none focus:border-cyan-400/40" />
+          </div>
+          <input value={card.scryfallImage} onChange={e => onChange({ ...card, scryfallImage: e.target.value })}
+            placeholder="Scryfall image URL"
+            className="w-full rounded border border-white/10 bg-black px-2.5 py-1.5 text-[10px] font-mono focus:outline-none focus:border-cyan-400/40" />
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Product Form (New / Edit) ────────────────────────────────────────────────
 
 function ProductForm({ adminKey, product, onBack, onSaved }: {
@@ -778,43 +861,28 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
 
             {/* Possible Pulls */}
             <div>
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between mb-3">
                 <label className="text-[10px] uppercase tracking-[0.2em] text-gray-600">Possible Pulls</label>
-                <button type="button" onClick={() => setPossiblePulls((p) => [...p, { id: Date.now(), title: "", subtitle: "", probability: "", scryfallImage: "", featured: false }])}
+                <button type="button"
+                  onClick={() => setPossiblePulls(p => [...p, { id: Date.now(), title: "", subtitle: "", probability: "", scryfallImage: "", featured: false }])}
                   className="text-[10px] text-cyan-400 hover:text-cyan-300 transition-colors">+ Add Card</button>
               </div>
-              <div className="grid gap-3">
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
                 {possiblePulls.map((card, i) => (
-                  <div key={card.id} className="border border-white/[0.06] rounded p-3 grid gap-2">
-                    <div className="grid sm:grid-cols-2 gap-2">
-                      <input value={card.title} onChange={(e) => setPossiblePulls((p) => p.map((c, j) => j === i ? { ...c, title: e.target.value } : c))}
-                        placeholder="Card name"
-                        className="rounded border border-white/10 bg-black px-3 py-2 text-xs focus:outline-none focus:border-cyan-400/40" />
-                      <input value={card.subtitle} onChange={(e) => setPossiblePulls((p) => p.map((c, j) => j === i ? { ...c, subtitle: e.target.value } : c))}
-                        placeholder="e.g. Mythic Rare · Eastman Art"
-                        className="rounded border border-white/10 bg-black px-3 py-2 text-xs focus:outline-none focus:border-cyan-400/40" />
-                    </div>
-                    <div className="grid grid-cols-[1fr_100px_auto_auto] gap-2 items-center">
-                      <input value={card.scryfallImage} onChange={(e) => setPossiblePulls((p) => p.map((c, j) => j === i ? { ...c, scryfallImage: e.target.value } : c))}
-                        placeholder="Scryfall image URL"
-                        className="rounded border border-white/10 bg-black px-3 py-2 text-xs focus:outline-none focus:border-cyan-400/40 font-mono" />
-                      <input value={card.probability} onChange={(e) => setPossiblePulls((p) => p.map((c, j) => j === i ? { ...c, probability: e.target.value } : c))}
-                        placeholder="~2%"
-                        className="rounded border border-white/10 bg-black px-3 py-2 text-xs focus:outline-none focus:border-cyan-400/40" />
-                      <label className="flex items-center gap-1.5 cursor-pointer text-[10px] text-gray-500 whitespace-nowrap">
-                        <input type="checkbox" checked={card.featured} onChange={(e) => setPossiblePulls((p) => p.map((c, j) => j === i ? { ...c, featured: e.target.checked } : c))}
-                          className="accent-cyan-400" />
-                        Featured
-                      </label>
-                      <button type="button" onClick={() => setPossiblePulls((p) => p.filter((_, j) => j !== i))}
-                        className="text-gray-600 hover:text-red-400 transition-colors text-lg leading-none">×</button>
-                    </div>
-                    {card.scryfallImage && (
-                      <img src={card.scryfallImage} alt={card.title} className="h-16 w-12 object-contain rounded border border-white/10" />
-                    )}
-                  </div>
+                  <PullCardEditor
+                    key={card.id}
+                    card={card}
+                    onChange={updated => setPossiblePulls(p => p.map((c, j) => j === i ? updated : c))}
+                    onDelete={() => setPossiblePulls(p => p.filter((_, j) => j !== i))}
+                  />
                 ))}
+                <button
+                  type="button"
+                  onClick={() => setPossiblePulls(p => [...p, { id: Date.now(), title: "", subtitle: "", probability: "", scryfallImage: "", featured: false }])}
+                  className="aspect-[2.5/3.5] rounded-lg border border-dashed border-white/10 hover:border-cyan-400/30 flex items-center justify-center text-gray-700 hover:text-cyan-400 transition-colors text-2xl"
+                >+</button>
               </div>
+              <p className="text-[9px] text-gray-700 mt-2">★ = featured on storefront · hover card to edit or delete</p>
             </div>
 
           </div>
