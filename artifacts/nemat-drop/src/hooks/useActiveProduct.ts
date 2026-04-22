@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "";
+const STORAGE_KEY = "ttd_active_product";
 
 export type DbProduct = {
   id: number;
@@ -22,11 +23,28 @@ export type DbProduct = {
   intelReport: string;       // plain text, paragraphs separated by \n\n
 };
 
-let cached: DbProduct | null = null;
+function readStorage(): DbProduct | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeStorage(p: DbProduct) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(p));
+  } catch {}
+}
+
+// Seed from localStorage so first render has the correct product immediately
+let cached: DbProduct | null = readStorage();
 const listeners: Array<(p: DbProduct | null) => void> = [];
 
 function notify(p: DbProduct | null) {
   cached = p;
+  if (p) writeStorage(p);
   listeners.forEach((fn) => fn(p));
 }
 
@@ -37,7 +55,7 @@ async function fetchActive() {
     const data = await res.json();
     notify(Array.isArray(data) && data[0] ? data[0] : null);
   } catch {
-    // silently fall back to static data
+    // silently keep whatever is in cache
   }
 }
 

@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "";
-import { product } from "@/data/product";
 import { useActiveProduct } from "@/hooks/useActiveProduct";
-import { product as staticProduct } from "@/data/product";
 
 function getTimeLeft(iso: string) {
   const diff = Math.max(0, new Date(iso).getTime() - Date.now());
@@ -117,11 +115,15 @@ export default function LeftShowcasePanel() {
           style={{ background: "radial-gradient(circle at 50% 50%, rgba(34,211,238,0.12) 0%, transparent 70%)" }}
         />
         <div className="relative z-10 w-full h-full flex items-center justify-center">
-          <img
-            src={dbProduct?.imageUrl ?? staticProduct.imageUrl}
-            alt={dbProduct?.title ?? staticProduct.title}
-            className="w-full h-full object-contain drop-shadow-[0_0_40px_rgba(34,211,238,0.4)]"
-          />
+          {dbProduct?.imageUrl ? (
+            <img
+              src={dbProduct.imageUrl}
+              alt={dbProduct.title}
+              className="w-full h-full object-contain drop-shadow-[0_0_40px_rgba(34,211,238,0.4)]"
+            />
+          ) : (
+            <div className="w-48 h-64 rounded-lg bg-white/[0.04] animate-pulse" />
+          )}
         </div>
       </div>
 
