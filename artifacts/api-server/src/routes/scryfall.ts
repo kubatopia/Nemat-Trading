@@ -189,6 +189,77 @@ router.get("/tcgplayer/debug", async (req, res) => {
   res.json(results);
 });
 
+// Scrape TCGPlayer product page for description + contents via __NEXT_DATA__
+async function scrapeProductPage(url: string): Promise<{ intelReport: string | null; contents: string[] | null }> {
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Referer": "https://www.google.com/",
+      },
+      redirect: "follow",
+    });
+    if (!res.ok) return { intelReport: null, contents: null };
+    const html = await res.text();
+    if (html.includes("Just a moment") || html.includes("challenge-platform")) return { intelReport: null, contents: null };
+
+    const match = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
+    if (!match) return { intelReport: null, contents: null };
+
+    const nextData = JSON.parse(match[1]);
+    const pageProps = nextData?.props?.pageProps ?? {};
+    const product = pageProps.product ?? pageProps.productDetails ?? pageProps.details ?? null;
+    const extendedData: any[] = product?.extendedData ?? product?.extended_data ?? [];
+
+    function stripHtml(s: string) {
+      return s
+        .replace(/<br\s*\/?>/gi, "\n")
+        .replace(/<\/p>/gi, "\n\n")
+        .replace(/<\/li>/gi, "\n")
+        .replace(/<[^>]+>/g, "")
+        .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&nbsp;/g, " ")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+    }
+
+    let intelReport: string | null = null;
+    let contents: string[] | null = null;
+
+    for (const item of extendedData) {
+      const name = (item.name ?? item.displayName ?? "").toLowerCase();
+      const value = String(item.value ?? "");
+      if (!value) continue;
+
+      if (name.includes("description") || name.includes("product detail") || name === "description") {
+        const text = stripHtml(value);
+        if (text) intelReport = text;
+      }
+      if (name.includes("content")) {
+        const lines = stripHtml(value).split("\n").map((s: string) => s.trim()).filter(Boolean);
+        if (lines.length) contents = lines;
+      }
+    }
+
+    return { intelReport, contents };
+  } catch {
+    return { intelReport: null, contents: null };
+  }
+}
+
+function buildSpecs(set: any, slug: string): { label: string; value: string }[] {
+  const specs: { label: string; value: string }[] = [];
+  specs.push({ label: "SET", value: set.name });
+  if (set.released_at) specs.push({ label: "RELEASE", value: set.released_at.substring(0, 4) });
+  const isBox = /booster[-_]box|booster[-_]display/i.test(slug);
+  specs.push({ label: isBox ? "PACKS / BOX" : "PACKS / BOX", value: isBox ? "36" : "1" });
+  const isCollector = /collector/i.test(slug);
+  const isSet = /set[-_]booster/i.test(slug);
+  specs.push({ label: "CARDS / PACK", value: isCollector ? "15" : isSet ? "12" : "15" });
+  return specs;
+}
+
 // Lookup product data from a TCGPlayer URL
 router.post("/lookup/tcgplayer", async (req, res) => {
   const { url } = req.body as { url: string };
@@ -218,10 +289,11 @@ router.post("/lookup/tcgplayer", async (req, res) => {
     setName = dedupeWords(setName);
     const suggestedTitle = [titleCase(setName), packType].filter(Boolean).join(" ");
 
-    // Scrape TCGPlayer for image + price (runs in parallel with Scryfall search)
-    const [tcgData, setsRes] = await Promise.all([
+    // Scrape TCGPlayer for image + price + product details, and fetch Scryfall sets — all in parallel
+    const [tcgData, setsRes, pageDetails] = await Promise.all([
       scrapeTCGPlayer(url),
       fetch("https://api.scryfall.com/sets"),
+      scrapeProductPage(url),
     ]);
 
     const tcgImageUrl = tcgData.imageUrl;
@@ -279,7 +351,10 @@ router.post("/lookup/tcgplayer", async (req, res) => {
           topCards,
           scryfallId: null,
           imageUrl: tcgImageUrl ?? topCards[0]?.imageUrl ?? null,
-          usd: tcgLowestPrice,  // from TCGPlayer scrape
+          usd: tcgLowestPrice,
+          specs: buildSpecs(set, slug),
+          intelReport: pageDetails.intelReport,
+          contents: pageDetails.contents,
         });
         return;
       }

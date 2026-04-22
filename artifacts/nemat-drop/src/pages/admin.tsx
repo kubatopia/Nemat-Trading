@@ -424,6 +424,12 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
         imageUrl: data.imageUrl || f.imageUrl,  // lookup wins for image
       }));
       if (data.usd) setTcgMarketPrice(data.usd);
+      // Auto-populate specs, contents, intel report from lookup
+      if (data.type === "set") {
+        if (data.specs?.length) setSpecs(data.specs);
+        if (data.contents?.length) setContents(data.contents);
+        if (data.intelReport) setIntelReport(data.intelReport);
+      }
       // Auto-populate possible pulls from top set cards
       if (data.type === "set" && data.topCards?.length) {
         setPossiblePulls(
