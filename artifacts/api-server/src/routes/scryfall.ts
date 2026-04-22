@@ -189,57 +189,92 @@ router.get("/tcgplayer/debug", async (req, res) => {
   res.json(results);
 });
 
-// Scrape TCGPlayer product page for description + contents via __NEXT_DATA__
+// Scrape TCGPlayer product page for description + contents
 async function scrapeProductPage(url: string): Promise<{ intelReport: string | null; contents: string[] | null }> {
+  const headers = {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Referer": "https://www.google.com/",
+    "sec-ch-ua": '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+    "sec-ch-ua-mobile": "?0",
+    "sec-ch-ua-platform": '"macOS"',
+    "sec-fetch-dest": "document",
+    "sec-fetch-mode": "navigate",
+    "sec-fetch-site": "none",
+    "sec-fetch-user": "?1",
+    "Upgrade-Insecure-Requests": "1",
+  };
+
+  function stripHtml(s: string) {
+    return s
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<\/p>/gi, "\n\n")
+      .replace(/<\/li>/gi, "\n")
+      .replace(/<[^>]+>/g, "")
+      .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&nbsp;/g, " ")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+  }
+
   try {
-    const res = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Referer": "https://www.google.com/",
-      },
-      redirect: "follow",
-    });
+    const res = await fetch(url, { headers, redirect: "follow" });
     if (!res.ok) return { intelReport: null, contents: null };
     const html = await res.text();
     if (html.includes("Just a moment") || html.includes("challenge-platform")) return { intelReport: null, contents: null };
 
-    const match = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
-    if (!match) return { intelReport: null, contents: null };
-
-    const nextData = JSON.parse(match[1]);
-    const pageProps = nextData?.props?.pageProps ?? {};
-    const product = pageProps.product ?? pageProps.productDetails ?? pageProps.details ?? null;
-    const extendedData: any[] = product?.extendedData ?? product?.extended_data ?? [];
-
-    function stripHtml(s: string) {
-      return s
-        .replace(/<br\s*\/?>/gi, "\n")
-        .replace(/<\/p>/gi, "\n\n")
-        .replace(/<\/li>/gi, "\n")
-        .replace(/<[^>]+>/g, "")
-        .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&nbsp;/g, " ")
-        .replace(/\n{3,}/g, "\n\n")
-        .trim();
-    }
-
     let intelReport: string | null = null;
     let contents: string[] | null = null;
 
-    for (const item of extendedData) {
-      const name = (item.name ?? item.displayName ?? "").toLowerCase();
-      const value = String(item.value ?? "");
-      if (!value) continue;
+    // Strategy 1: JSON-LD structured data (required for Google SEO — most reliable)
+    const jsonLdBlocks = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/gi)];
+    for (const block of jsonLdBlocks) {
+      try {
+        const data = JSON.parse(block[1]);
+        const entries = Array.isArray(data) ? data : [data];
+        for (const entry of entries) {
+          const desc = entry.description ?? entry.offers?.description ?? null;
+          if (desc && desc.length > 80) {
+            intelReport = stripHtml(String(desc));
+            break;
+          }
+        }
+      } catch {}
+      if (intelReport) break;
+    }
 
-      if (name.includes("description") || name.includes("product detail") || name === "description") {
-        const text = stripHtml(value);
-        if (text) intelReport = text;
+    // Strategy 2: __NEXT_DATA__ extendedData fields
+    if (!intelReport) {
+      const nextDataMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
+      if (nextDataMatch) {
+        try {
+          const nextData = JSON.parse(nextDataMatch[1]);
+          const pageProps = nextData?.props?.pageProps ?? {};
+          const product = pageProps.product ?? pageProps.productDetails ?? pageProps.details ?? null;
+          const extendedData: any[] = product?.extendedData ?? product?.extended_data ?? [];
+
+          for (const item of extendedData) {
+            const name = (item.name ?? item.displayName ?? "").toLowerCase();
+            const value = String(item.value ?? "");
+            if (!value) continue;
+            if (name.includes("description") || name.includes("product detail")) {
+              const text = stripHtml(value);
+              if (text) intelReport = text;
+            }
+            if (name.includes("content")) {
+              const lines = stripHtml(value).split("\n").map((s: string) => s.trim()).filter(Boolean);
+              if (lines.length) contents = lines;
+            }
+          }
+        } catch {}
       }
-      if (name.includes("content")) {
-        const lines = stripHtml(value).split("\n").map((s: string) => s.trim()).filter(Boolean);
-        if (lines.length) contents = lines;
-      }
+    }
+
+    // Strategy 3: meta description tag as last resort
+    if (!intelReport) {
+      const metaMatch = html.match(/<meta\s+name="description"\s+content="([^"]{80,})"/i)
+        ?? html.match(/<meta\s+content="([^"]{80,})"\s+name="description"/i);
+      if (metaMatch) intelReport = metaMatch[1].trim();
     }
 
     return { intelReport, contents };
