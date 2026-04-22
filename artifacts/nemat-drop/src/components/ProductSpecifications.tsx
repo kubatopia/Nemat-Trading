@@ -15,7 +15,7 @@ export default function ProductSpecifications() {
       ? JSON.parse(dbProduct.contents)
       : staticProduct.contents;
 
-  const copyright = dbProduct?.copyright || staticProduct.copyright;
+  const copyright = staticProduct.copyright;
 
   return (
     <section className="py-16 border-t border-white/5">

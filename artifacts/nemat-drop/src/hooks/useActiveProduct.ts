@@ -20,7 +20,6 @@ export type DbProduct = {
   pullProbabilities: string; // JSON array
   possiblePulls: string;     // JSON array
   intelReport: string;       // plain text, paragraphs separated by \n\n
-  copyright: string;
 };
 
 let cached: DbProduct | null = null;

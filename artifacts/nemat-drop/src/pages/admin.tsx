@@ -25,7 +25,6 @@ type Product = {
   pullProbabilities: string;
   possiblePulls: string;
   intelReport: string;
-  copyright: string;
   createdAt: string;
 };
 
@@ -325,7 +324,6 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
       : []
   );
   const [intelReport, setIntelReport] = useState(product?.intelReport ?? "");
-  const [copyright, setCopyright] = useState(product?.copyright ?? "");
   const [pullProbs, setPullProbs] = useState<PullProb[]>(
     product?.pullProbabilities && product.pullProbabilities !== "[]"
       ? JSON.parse(product.pullProbabilities)
@@ -426,7 +424,6 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
       pullProbabilities: pullProbs,
       possiblePulls: possiblePulls,
       intelReport,
-      copyright,
     };
     try {
       const url = isEdit ? `${API_URL}/api/admin/products/${product.id}` : `${API_URL}/api/admin/products`;
@@ -670,14 +667,6 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
                   </div>
                 ))}
               </div>
-            </div>
-
-            {/* Copyright */}
-            <div>
-              <label className="text-[10px] uppercase tracking-[0.2em] text-gray-600 block mb-1.5">Copyright</label>
-              <input value={copyright} onChange={(e) => setCopyright(e.target.value)}
-                placeholder="© 2025 Wizards of the Coast LLC. ..."
-                className="w-full rounded border border-white/10 bg-black px-4 py-2.5 text-xs text-gray-400 focus:outline-none focus:border-cyan-400/40" />
             </div>
 
           </div>
