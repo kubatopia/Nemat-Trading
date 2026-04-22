@@ -248,6 +248,63 @@ async function scrapeProductPage(url: string): Promise<{ intelReport: string | n
   }
 }
 
+function parsePullProbabilities(
+  contents: string[],
+  slug: string
+): { label: string; abbr: string; percent: number; color: string }[] {
+  const text = contents.join(" ").toLowerCase();
+
+  let total = 15;
+  let common = 0, uncommon = 0, land = 0, rareOrHigher = 0;
+
+  const totalMatch = text.match(/(\d+) magic(?:: the gathering)? cards?/);
+  if (totalMatch) total = parseInt(totalMatch[1]);
+
+  const rareMatch = text.match(/(\d+) cards? of rarity rare or higher|includes? (\d+) (?:cards? of )?rare/);
+  if (rareMatch) rareOrHigher = parseInt(rareMatch[1] ?? rareMatch[2] ?? "0");
+
+  const uncommonMatch = text.match(/(\d+) uncommon/);
+  if (uncommonMatch) uncommon = parseInt(uncommonMatch[1]);
+
+  const commonMatch = text.match(/(\d+) common/);
+  if (commonMatch) common = parseInt(commonMatch[1]);
+
+  const landMatch = text.match(/(\d+) land/);
+  if (landMatch) land = parseInt(landMatch[1]);
+
+  // Fallback heuristics by product type when page scrape didn't yield data
+  if (!rareOrHigher && !uncommon && !common) {
+    const isCollector = /collector/i.test(slug);
+    const isDraft = /draft/i.test(slug);
+    const isSet = /set.booster/i.test(slug);
+    if (isCollector)    { total = 15; common = 4; uncommon = 5; land = 1; rareOrHigher = 5; }
+    else if (isDraft)   { total = 15; common = 10; uncommon = 3; land = 0; rareOrHigher = 2; }
+    else if (isSet)     { total = 12; common = 2; uncommon = 3; land = 1; rareOrHigher = 3; }
+    else                { total = 15; common = 5; uncommon = 4; land = 1; rareOrHigher = 5; }
+  }
+
+  // Split rare/mythic using standard 1-in-8 mythic ratio
+  const mythicCount = rareOrHigher > 0 ? Math.max(1, Math.round(rareOrHigher / 8)) : 0;
+  const rareCount = rareOrHigher - mythicCount;
+  const denominator = common + uncommon + land + rareCount + mythicCount || total;
+
+  const slots: { label: string; abbr: string; count: number; color: string }[] = [
+    { label: "Common",      abbr: "C", count: common,      color: "#6b7280" },
+    { label: "Uncommon",    abbr: "U", count: uncommon,    color: "#60a5fa" },
+    { label: "Land",        abbr: "L", count: land,        color: "#4ade80" },
+    { label: "Rare",        abbr: "R", count: rareCount,   color: "#fbbf24" },
+    { label: "Mythic Rare", abbr: "M", count: mythicCount, color: "#f97316" },
+  ].filter(s => s.count > 0);
+
+  const probs = slots.map(s => ({ ...s, percent: Math.round((s.count / denominator) * 100) }));
+
+  // Normalize to exactly 100%
+  const sum = probs.reduce((acc, p) => acc + p.percent, 0);
+  if (sum !== 100 && probs.length > 0) probs[probs.length - 1].percent += 100 - sum;
+
+  return probs.map(({ label, abbr, percent, color }) => ({ label, abbr, percent, color }));
+}
+
 function buildSpecs(set: any, slug: string): { label: string; value: string }[] {
   const specs: { label: string; value: string }[] = [];
   specs.push({ label: "SET", value: set.name });
@@ -356,6 +413,7 @@ router.post("/lookup/tcgplayer", async (req, res) => {
           specs: buildSpecs(set, slug),
           intelReport: pageDetails.intelReport,
           contents: pageDetails.contents,
+          pullProbabilities: parsePullProbabilities(pageDetails.contents ?? [], slug),
         });
         return;
       }

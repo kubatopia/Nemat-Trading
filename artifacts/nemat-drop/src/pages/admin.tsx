@@ -429,6 +429,7 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
         if (data.specs?.length) setSpecs(data.specs);
         if (data.contents?.length) setContents(data.contents);
         if (data.intelReport) setIntelReport(data.intelReport);
+        if (data.pullProbabilities?.length) setPullProbs(data.pullProbabilities);
       }
       // Auto-populate possible pulls from top set cards
       if (data.type === "set" && data.topCards?.length) {
