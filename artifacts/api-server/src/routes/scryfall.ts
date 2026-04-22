@@ -328,4 +328,33 @@ router.post("/lookup/tcgplayer", async (req, res) => {
   }
 });
 
+// Remove background from an image URL using remove.bg
+router.post("/remove-background", async (req, res) => {
+  const { imageUrl } = req.body as { imageUrl?: string };
+  if (!imageUrl) { res.status(400).json({ error: "imageUrl required" }); return; }
+
+  const apiKey = process.env.REMOVE_BG_API_KEY;
+  if (!apiKey) { res.status(503).json({ error: "REMOVE_BG_API_KEY not configured" }); return; }
+
+  try {
+    const response = await fetch("https://api.remove.bg/v1.0/removebg", {
+      method: "POST",
+      headers: { "X-Api-Key": apiKey, "Content-Type": "application/json" },
+      body: JSON.stringify({ image_url: imageUrl, size: "auto" }),
+    });
+
+    if (!response.ok) {
+      const err: any = await response.json().catch(() => ({}));
+      res.status(500).json({ error: err.errors?.[0]?.title ?? "remove.bg failed" });
+      return;
+    }
+
+    const buffer = await response.arrayBuffer();
+    const base64 = Buffer.from(buffer).toString("base64");
+    res.json({ png: `data:image/png;base64,${base64}` });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message ?? "Failed to remove background" });
+  }
+});
+
 export default router;

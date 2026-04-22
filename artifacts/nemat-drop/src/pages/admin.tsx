@@ -212,6 +212,34 @@ function ImageField({ value, onChange }: {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [removingBg, setRemovingBg] = useState(false);
+
+  const handleRemoveBg = useCallback(async () => {
+    if (!value) return;
+    setRemovingBg(true);
+    setUploadError(null);
+    try {
+      // 1. Get transparent PNG from the backend
+      const res = await fetch(`${API_URL}/api/remove-background`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageUrl: value }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Remove background failed");
+
+      // 2. Convert base64 PNG to a File and upload to Cloudinary
+      const byteString = atob(data.png.split(",")[1]);
+      const arr = new Uint8Array(byteString.length);
+      for (let i = 0; i < byteString.length; i++) arr[i] = byteString.charCodeAt(i);
+      const file = new File([arr], "product-nobg.png", { type: "image/png" });
+      await handleFile(file);
+    } catch (err: any) {
+      setUploadError(err.message ?? "Background removal failed");
+    } finally {
+      setRemovingBg(false);
+    }
+  }, [value]);
 
   const handleFile = useCallback(async (file: File) => {
     if (!CLOUDINARY_CLOUD || !CLOUDINARY_PRESET) {
@@ -278,13 +306,25 @@ function ImageField({ value, onChange }: {
               </>
             )}
           </div>
-          {/* URL input — still editable for TCGPlayer auto-fill or manual paste */}
-          <input
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder="Or paste URL (auto-filled by Look Up)"
-            className="w-full rounded border border-white/10 bg-black px-4 py-2.5 text-xs text-gray-400 focus:outline-none focus:border-cyan-400/40"
-          />
+          {/* URL input + Remove BG */}
+          <div className="flex gap-2">
+            <input
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              placeholder="Or paste URL (auto-filled by Look Up)"
+              className="flex-1 rounded border border-white/10 bg-black px-4 py-2.5 text-xs text-gray-400 focus:outline-none focus:border-cyan-400/40"
+            />
+            {value && (
+              <button
+                type="button"
+                onClick={handleRemoveBg}
+                disabled={removingBg || uploading}
+                className="rounded border border-cyan-400/30 px-3 py-2 text-[10px] text-cyan-400 hover:bg-cyan-400/10 transition-colors disabled:opacity-40 whitespace-nowrap"
+              >
+                {removingBg ? "Removing..." : "Remove BG"}
+              </button>
+            )}
+          </div>
         </div>
       </div>
       {uploadError && <p className="text-[10px] text-red-400 mt-1">{uploadError}</p>}
