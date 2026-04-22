@@ -339,6 +339,7 @@ router.post("/lookup/tcgplayer", async (req, res) => {
               name: c.name,
               imageUrl: c.image_uris?.normal ?? c.card_faces?.[0]?.image_uris?.normal ?? null,
               usd: c.prices?.usd ?? null,
+              rarity: c.rarity ?? null, // "mythic" | "rare" | "uncommon" | "common"
             });
           }
         }

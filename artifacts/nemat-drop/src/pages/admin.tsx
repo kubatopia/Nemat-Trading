@@ -432,12 +432,24 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
       }
       // Auto-populate possible pulls from top set cards
       if (data.type === "set" && data.topCards?.length) {
+        const rarityLabel: Record<string, string> = {
+          mythic: "Mythic Rare",
+          rare: "Rare",
+          uncommon: "Uncommon",
+          common: "Common",
+        };
+        const rarityProb: Record<string, string> = {
+          mythic: "~2%",
+          rare: "~8%",
+          uncommon: "~30%",
+          common: "~60%",
+        };
         setPossiblePulls(
           data.topCards.slice(0, 8).map((c: any, i: number) => ({
             id: Date.now() + i,
             title: c.name,
-            subtitle: c.usd ? `$${parseFloat(c.usd).toFixed(2)} value` : "",
-            probability: "",
+            subtitle: rarityLabel[c.rarity] ?? "Rare",
+            probability: rarityProb[c.rarity] ?? "",
             scryfallImage: c.imageUrl ?? "",
             featured: i === 0,
           }))
