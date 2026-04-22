@@ -15,9 +15,12 @@ export type DbProduct = {
   discountPercent: number;
   tcgplayerUrl: string | null;
   tcgMarketPriceCents: number | null;
+  specs: string;             // JSON array of {label, value}
+  contents: string;          // JSON array of strings
   pullProbabilities: string; // JSON array
   possiblePulls: string;     // JSON array
   intelReport: string;       // plain text, paragraphs separated by \n\n
+  copyright: string;
 };
 
 let cached: DbProduct | null = null;

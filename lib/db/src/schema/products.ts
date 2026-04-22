@@ -20,6 +20,7 @@ export const productsTable = pgTable("products", {
   pullProbabilities: text("pull_probabilities").notNull().default("[]"), // JSON array
   possiblePulls: text("possible_pulls").notNull().default("[]"),         // JSON array
   intelReport: text("intel_report").notNull().default(""),               // plain text, paragraphs separated by \n\n
+  copyright: text("copyright").notNull().default(""),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

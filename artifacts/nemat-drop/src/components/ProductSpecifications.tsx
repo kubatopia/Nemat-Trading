@@ -1,8 +1,21 @@
 
-import { product } from "@/data/product";
+import { product as staticProduct } from "@/data/product";
+import { useActiveProduct } from "@/hooks/useActiveProduct";
 
 export default function ProductSpecifications() {
-  const { specs, contents, copyright } = product;
+  const dbProduct = useActiveProduct();
+
+  const specs: { label: string; value: string }[] =
+    dbProduct?.specs && dbProduct.specs !== "[]"
+      ? JSON.parse(dbProduct.specs)
+      : staticProduct.specs;
+
+  const contents: string[] =
+    dbProduct?.contents && dbProduct.contents !== "[]"
+      ? JSON.parse(dbProduct.contents)
+      : staticProduct.contents;
+
+  const copyright = dbProduct?.copyright || staticProduct.copyright;
 
   return (
     <section className="py-16 border-t border-white/5">
@@ -33,7 +46,9 @@ export default function ProductSpecifications() {
       </div>
 
       {/* Copyright */}
-      <p className="text-[10px] text-gray-600 mt-8 leading-relaxed">{copyright}</p>
+      {copyright && (
+        <p className="text-[10px] text-gray-600 mt-8 leading-relaxed">{copyright}</p>
+      )}
     </section>
   );
 }

@@ -5,6 +5,7 @@ const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD ?? "";
 
 type PullProb = { label: string; abbr: string; percent: number; color: string };
 type PossiblePull = { id: number; title: string; subtitle: string; probability: string; scryfallImage: string; featured: boolean };
+type Spec = { label: string; value: string };
 
 type Product = {
   id: number;
@@ -19,9 +20,12 @@ type Product = {
   discountPercent: number;
   tcgplayerUrl: string | null;
   tcgMarketPriceCents: number | null;
+  specs: string;
+  contents: string;
   pullProbabilities: string;
   possiblePulls: string;
   intelReport: string;
+  copyright: string;
   createdAt: string;
 };
 
@@ -310,7 +314,18 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
     discountPercent: String(product.discountPercent ?? 15),
   } : emptyForm);
 
+  const [specs, setSpecs] = useState<Spec[]>(
+    product?.specs && product.specs !== "[]"
+      ? JSON.parse(product.specs)
+      : []
+  );
+  const [contents, setContents] = useState<string[]>(
+    product?.contents && product.contents !== "[]"
+      ? JSON.parse(product.contents)
+      : []
+  );
   const [intelReport, setIntelReport] = useState(product?.intelReport ?? "");
+  const [copyright, setCopyright] = useState(product?.copyright ?? "");
   const [pullProbs, setPullProbs] = useState<PullProb[]>(
     product?.pullProbabilities && product.pullProbabilities !== "[]"
       ? JSON.parse(product.pullProbabilities)
@@ -371,6 +386,19 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
         imageUrl: data.imageUrl || f.imageUrl,  // lookup wins for image
       }));
       if (data.usd) setTcgMarketPrice(data.usd);
+      // Auto-populate possible pulls from top set cards
+      if (data.type === "set" && data.topCards?.length) {
+        setPossiblePulls(
+          data.topCards.slice(0, 8).map((c: any, i: number) => ({
+            id: Date.now() + i,
+            title: c.name,
+            subtitle: c.usd ? `$${parseFloat(c.usd).toFixed(2)} value` : "",
+            probability: "",
+            scryfallImage: c.imageUrl ?? "",
+            featured: i === 0,
+          }))
+        );
+      }
     } catch (err: any) {
       setLookupError(err.message ?? "Lookup failed");
     } finally {
@@ -393,9 +421,12 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
       discountPercent: parseInt(form.discountPercent, 10) || 15,
       tcgplayerUrl: form.tcgplayerUrl,
       tcgMarketPriceCents: tcgMarketPrice ? Math.round(parseFloat(tcgMarketPrice) * 100) : null,
+      specs,
+      contents,
       pullProbabilities: pullProbs,
       possiblePulls: possiblePulls,
       intelReport,
+      copyright,
     };
     try {
       const url = isEdit ? `${API_URL}/api/admin/products/${product.id}` : `${API_URL}/api/admin/products`;
@@ -592,6 +623,65 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
           </div>
         </section>
 
+
+        {/* Specifications */}
+        <section className="border border-white/[0.06] rounded bg-white/[0.02] p-6">
+          <h2 className="text-[10px] uppercase tracking-[0.25em] text-gray-500 mb-5">Specifications</h2>
+          <div className="grid gap-6">
+
+            {/* Specs */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-[10px] uppercase tracking-[0.2em] text-gray-600">Spec Rows</label>
+                <button type="button" onClick={() => setSpecs((s) => [...s, { label: "", value: "" }])}
+                  className="text-[10px] text-cyan-400 hover:text-cyan-300 transition-colors">+ Add Row</button>
+              </div>
+              <div className="grid gap-2">
+                {specs.map((row, i) => (
+                  <div key={i} className="grid grid-cols-[1fr_1fr_32px] gap-2 items-center">
+                    <input value={row.label} onChange={(e) => setSpecs((s) => s.map((r, j) => j === i ? { ...r, label: e.target.value } : r))}
+                      placeholder="Label (e.g. SET)"
+                      className="rounded border border-white/10 bg-black px-3 py-2 text-xs focus:outline-none focus:border-cyan-400/40 uppercase" />
+                    <input value={row.value} onChange={(e) => setSpecs((s) => s.map((r, j) => j === i ? { ...r, value: e.target.value } : r))}
+                      placeholder="Value (e.g. Strixhaven)"
+                      className="rounded border border-white/10 bg-black px-3 py-2 text-xs focus:outline-none focus:border-cyan-400/40" />
+                    <button type="button" onClick={() => setSpecs((s) => s.filter((_, j) => j !== i))}
+                      className="text-gray-600 hover:text-red-400 transition-colors text-lg leading-none">×</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Contents */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-[10px] uppercase tracking-[0.2em] text-gray-600">Contents</label>
+                <button type="button" onClick={() => setContents((c) => [...c, ""])}
+                  className="text-[10px] text-cyan-400 hover:text-cyan-300 transition-colors">+ Add Line</button>
+              </div>
+              <div className="grid gap-2">
+                {contents.map((line, i) => (
+                  <div key={i} className="grid grid-cols-[1fr_32px] gap-2 items-center">
+                    <input value={line} onChange={(e) => setContents((c) => c.map((l, j) => j === i ? e.target.value : l))}
+                      placeholder="e.g. 15 Magic: The Gathering cards"
+                      className="rounded border border-white/10 bg-black px-3 py-2 text-xs focus:outline-none focus:border-cyan-400/40" />
+                    <button type="button" onClick={() => setContents((c) => c.filter((_, j) => j !== i))}
+                      className="text-gray-600 hover:text-red-400 transition-colors text-lg leading-none">×</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Copyright */}
+            <div>
+              <label className="text-[10px] uppercase tracking-[0.2em] text-gray-600 block mb-1.5">Copyright</label>
+              <input value={copyright} onChange={(e) => setCopyright(e.target.value)}
+                placeholder="© 2025 Wizards of the Coast LLC. ..."
+                className="w-full rounded border border-white/10 bg-black px-4 py-2.5 text-xs text-gray-400 focus:outline-none focus:border-cyan-400/40" />
+            </div>
+
+          </div>
+        </section>
 
         {/* Content */}
         <section className="border border-white/[0.06] rounded bg-white/[0.02] p-6">
