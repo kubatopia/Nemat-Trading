@@ -657,16 +657,6 @@ router.post("/intel-report/restyle", async (req, res) => {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) { res.status(503).json({ error: "ANTHROPIC_API_KEY not configured on Railway" }); return; }
 
-  const styleRef = `These things vanished faster than a pizza at the lair the last time we saw them. But fear not!!! Another batch of mutagen-enhanced TMNT Magic Collector Boosters just crawled out of the sewer and they are LOADED.
-
-We're talking Turtle-powered rares and mythic rares, traditional foils shining brighter than a freshly sharpened katana, and full-art lands that look like they were pulled straight from the underground tunnels of NYC. And yes...there's a chance at the borderless source-material cards dripping with nostalgia thicker than mozzarella on a late-night pepperoni slice.
-
-But the REAL headline? Ohhhh yes...
-
-All four Turtles. Leonardo, Donatello, Raphael, and Michelangelo. Illustrated by the original co-creator himself, Kevin Eastman.
-
-I mean... come on. That's basically the cardboard equivalent of finding the secret entrance to the sewer lair.`;
-
   try {
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -680,16 +670,29 @@ I mean... come on. That's basically the cardboard equivalent of finding the secr
         max_tokens: 800,
         messages: [{
           role: "user",
-          content: `You write product intel copy for Tommy Top Decker Trading Co, a Magic: The Gathering sealed product shop run by hype-driven collectors. Rewrite the intel report below in the exact voice and energy of this style reference — punchy short paragraphs, personality, excitement, collector-speak. Naturally include terms like "rares", "mythic rares", "foils", "collector boosters" where they fit (they get highlighted on-site). Make it feel exclusive and exciting. Product-specific details (set name, contents, what makes it special) must be preserved. Output plain text only — paragraphs separated by a single blank line, no headers, no bullets, no markdown.
+          content: `You write intel copy for Tommy Top Decker Trading Co, a Magic: The Gathering sealed product drop shop. Write a short, punchy product intel report for the product below.
 
-STYLE REFERENCE:
-${styleRef}
+RULES — follow every one exactly:
+- No em dashes (never use — or –)
+- No mention of card rarity, card quality, foils, or how good cards look. Zero.
+- Lead with the LORE and WORLD of the product. What is this IP, universe, or setting? What makes it culturally special? Reference specific characters, places, events, or jokes from the source material the way the TMNT example uses pizza and the sewer lair.
+- Short punchy paragraphs. Energy. Personality. Like a collector who actually loves this stuff wrote it.
+- 4 to 6 paragraphs max.
+- Plain text only. Paragraphs separated by a single blank line. No headers, bullets, or markdown.
+
+TMNT EXAMPLE (notice: pizza reference, sewer lair, the Turtles by name, Kevin Eastman — all world-specific flavor. Zero card quality talk):
+These things vanished faster than a pizza at the lair the last time we saw them. But fear not!!! Another batch of mutagen-enhanced TMNT Magic Collector Boosters just crawled out of the sewer and they are LOADED.
+
+We're talking all four Turtles. Leonardo, Donatello, Raphael, and Michelangelo. Illustrated by the original co-creator himself, Kevin Eastman.
+
+And yes... there's a chance at the borderless source-material cards dripping with nostalgia thicker than mozzarella on a late-night pepperoni slice.
+
+I mean... come on. That's basically the cardboard equivalent of finding the secret entrance to the sewer lair.
 
 PRODUCT: ${productTitle ?? "Magic: The Gathering Product"}
-CURRENT INTEL REPORT:
-${intelReport}
+CONTEXT: ${intelReport}
 
-Restyled intel report:`,
+Write the intel report now:`,
         }],
       }),
     });
