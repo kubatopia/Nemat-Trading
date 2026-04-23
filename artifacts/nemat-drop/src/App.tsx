@@ -1,9 +1,58 @@
+import { useState } from "react";
 import LeftShowcasePanel from "@/components/LeftShowcasePanel";
 import RightContentPanel from "@/components/RightContentPanel";
 import CheckoutPage from "@/pages/checkout";
 import SuccessPage from "@/pages/success";
 import AdminPage from "@/pages/admin";
 import { product } from "@/data/product";
+
+const SITE_PASSWORD = import.meta.env.VITE_SITE_PASSWORD ?? "";
+
+function SiteGate({ onUnlock }: { onUnlock: () => void }) {
+  const [pw, setPw] = useState("");
+  const [error, setError] = useState(false);
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (pw === SITE_PASSWORD) {
+      sessionStorage.setItem("site_unlocked", "1");
+      onUnlock();
+    } else {
+      setError(true);
+      setPw("");
+    }
+  }
+
+  return (
+    <main className="min-h-screen bg-black text-white flex items-center justify-center px-6">
+      <div className="w-full max-w-sm">
+        <div className="flex items-center gap-2 mb-8">
+          <img src="/wizard.png" alt="" className="w-8 h-8 object-contain opacity-90" />
+          <span className="text-lg font-bold tracking-[0.05em]">{product.brand}</span>
+        </div>
+        <h1 className="text-2xl font-bold mb-2">Private Access</h1>
+        <p className="text-sm text-gray-500 mb-8">Enter the password to continue.</p>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <input
+            type="password"
+            placeholder="Password"
+            value={pw}
+            onChange={(e) => { setPw(e.target.value); setError(false); }}
+            autoFocus
+            className="rounded border border-white/10 bg-white/[0.03] px-4 py-3 text-sm focus:outline-none focus:border-cyan-400/40"
+          />
+          {error && <p className="text-sm text-red-400">Incorrect password</p>}
+          <button
+            type="submit"
+            className="rounded bg-cyan-400 px-5 py-3 text-xs font-bold uppercase tracking-[0.25em] text-black hover:bg-cyan-300 transition-colors"
+          >
+            Enter
+          </button>
+        </form>
+      </div>
+    </main>
+  );
+}
 
 function HomePage() {
   return (
@@ -39,10 +88,15 @@ function HomePage() {
 
 export default function App() {
   const path = window.location.pathname;
+  const [unlocked, setUnlocked] = useState(
+    !SITE_PASSWORD || sessionStorage.getItem("site_unlocked") === "1"
+  );
+
+  if (path === "/admin") return <AdminPage />;
+  if (!unlocked) return <SiteGate onUnlock={() => setUnlocked(true)} />;
 
   if (path === "/checkout") return <CheckoutPage />;
   if (path === "/success") return <SuccessPage />;
-  if (path === "/admin") return <AdminPage />;
 
   return <HomePage />;
 }
