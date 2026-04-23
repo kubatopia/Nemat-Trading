@@ -170,6 +170,14 @@ router.get("/tcgplayer/debug", async (req, res) => {
     const r = await fetch(`https://mpapi.tcgplayer.com/v2/product/${id}/pricepoints?mpfev=2`, { headers });
     results.pricepoints = { status: r.status, body: await r.json() };
   } catch (e: any) { results.pricepoints = { error: e.message }; }
+  try {
+    const r = await fetch(`https://mpapi.tcgplayer.com/v2/product/${id}/extendeddata?mpfev=2`, { headers });
+    results.extendeddata = { status: r.status, body: await r.json() };
+  } catch (e: any) { results.extendeddata = { error: e.message }; }
+  try {
+    const r = await fetch(`https://mpapi.tcgplayer.com/v2/product/${id}?mpfev=2`, { headers });
+    results.productDetails = { status: r.status, body: await r.json() };
+  } catch (e: any) { results.productDetails = { error: e.message }; }
   // Check what the HTML page returns (Cloudflare block check)
   try {
     const r = await fetch(`https://www.tcgplayer.com/product/${id}/`, {
@@ -190,20 +198,12 @@ router.get("/tcgplayer/debug", async (req, res) => {
 });
 
 // Scrape TCGPlayer product page for description + contents
-async function scrapeProductPage(url: string): Promise<{ intelReport: string | null; contents: string[] | null }> {
-  const headers = {
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-    "Accept-Language": "en-US,en;q=0.9",
-    "Referer": "https://www.google.com/",
-    "sec-ch-ua": '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
-    "sec-ch-ua-mobile": "?0",
-    "sec-ch-ua-platform": '"macOS"',
-    "sec-fetch-dest": "document",
-    "sec-fetch-mode": "navigate",
-    "sec-fetch-site": "none",
-    "sec-fetch-user": "?1",
-    "Upgrade-Insecure-Requests": "1",
+async function scrapeProductPage(url: string, productId: string | null): Promise<{ intelReport: string | null; contents: string[] | null }> {
+  const mpHeaders = {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Referer": "https://www.tcgplayer.com/",
+    "Origin": "https://www.tcgplayer.com",
+    "Accept": "application/json, text/plain, */*",
   };
 
   function stripHtml(s: string) {
@@ -217,108 +217,155 @@ async function scrapeProductPage(url: string): Promise<{ intelReport: string | n
       .trim();
   }
 
-  try {
-    const res = await fetch(url, { headers, redirect: "follow" });
-    if (!res.ok) return { intelReport: null, contents: null };
-    const html = await res.text();
-    if (html.includes("Just a moment") || html.includes("challenge-platform")) return { intelReport: null, contents: null };
+  let intelReport: string | null = null;
+  let contents: string[] | null = null;
 
-    let intelReport: string | null = null;
-    let contents: string[] | null = null;
-
-    // Recursively find a field by key name anywhere in a JSON object
-    function findByKey(obj: any, keys: string[], depth = 0): string | null {
-      if (depth > 12 || !obj || typeof obj !== "object") return null;
-      for (const k of Object.keys(obj)) {
-        if (keys.includes(k.toLowerCase()) && typeof obj[k] === "string" && obj[k].length > 80) {
-          return obj[k];
+  // Strategy 0: mpapi.tcgplayer.com extendeddata — same domain as pricepoints (no Cloudflare block)
+  // This is the only reliable source because TCGPlayer is fully client-side rendered.
+  if (productId) {
+    try {
+      const r = await fetch(
+        `https://mpapi.tcgplayer.com/v2/product/${productId}/extendeddata?mpfev=2`,
+        { headers: mpHeaders }
+      );
+      if (r.ok) {
+        const data = await r.json();
+        const results: any[] = data?.results ?? (Array.isArray(data) ? data : []);
+        for (const item of results) {
+          const name = (item.name ?? item.displayName ?? "").toLowerCase();
+          const value = String(item.value ?? "");
+          if (!value || value === "null") continue;
+          if (name.includes("description") || name.includes("product detail") || name.includes("overview")) {
+            const text = stripHtml(value);
+            if (text.length > 80 && !text.toLowerCase().includes("yu-gi-oh")) {
+              intelReport = text;
+            }
+          }
+          if (name.includes("content") || name.includes("what's in") || name.includes("box contain")) {
+            const lines = stripHtml(value).split("\n").map((s: string) => s.trim()).filter(Boolean);
+            if (lines.length) contents = lines;
+          }
         }
-        const found = findByKey(obj[k], keys, depth + 1);
-        if (found) return found;
       }
-      return null;
-    }
+    } catch {}
 
-    function findArrayByKey(obj: any, keys: string[], depth = 0): any[] | null {
-      if (depth > 12 || !obj || typeof obj !== "object") return null;
-      for (const k of Object.keys(obj)) {
-        if (keys.includes(k.toLowerCase()) && Array.isArray(obj[k]) && obj[k].length) return obj[k];
-        const found = findArrayByKey(obj[k], keys, depth + 1);
-        if (found) return found;
-      }
-      return null;
-    }
-
-    // Strategy 1: JSON-LD structured data
-    const jsonLdBlocks = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/gi)];
-    for (const block of jsonLdBlocks) {
+    // Strategy 0b: mpapi product details endpoint
+    if (!intelReport) {
       try {
-        const data = JSON.parse(block[1]);
-        const entries = Array.isArray(data) ? data : [data];
-        for (const entry of entries) {
-          const desc = entry.description ?? null;
-          // Skip generic site-wide descriptions
-          if (desc && desc.length > 80 && !desc.toLowerCase().includes("yu-gi-oh") && !desc.toLowerCase().includes("pokémon cards, one piece")) {
-            intelReport = stripHtml(String(desc));
-            break;
+        const r = await fetch(
+          `https://mpapi.tcgplayer.com/v2/product/${productId}?mpfev=2`,
+          { headers: mpHeaders }
+        );
+        if (r.ok) {
+          const data = await r.json();
+          const results: any[] = data?.results ?? (Array.isArray(data) ? data : [data]);
+          for (const item of results) {
+            const desc = item.description ?? item.productDescription ?? item.longDescription ?? null;
+            if (desc && typeof desc === "string" && desc.length > 80 && !desc.toLowerCase().includes("yu-gi-oh")) {
+              intelReport = stripHtml(desc);
+              break;
+            }
           }
         }
       } catch {}
-      if (intelReport) break;
     }
-
-    // Strategy 2: __NEXT_DATA__ — deep recursive search for description/contents fields
-    if (!intelReport) {
-      const nextDataMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
-      if (nextDataMatch) {
-        try {
-          const nextData = JSON.parse(nextDataMatch[1]);
-
-          // Try extendedData array pattern first
-          const extendedData: any[] = findArrayByKey(nextData, ["extendeddata", "extended_data"]) ?? [];
-          for (const item of extendedData) {
-            const name = (item.name ?? item.displayName ?? "").toLowerCase();
-            const value = String(item.value ?? "");
-            if (!value) continue;
-            if (name.includes("description") || name.includes("product detail")) {
-              const text = stripHtml(value);
-              if (text.length > 80) intelReport = text;
-            }
-            if (name.includes("content")) {
-              const lines = stripHtml(value).split("\n").map((s: string) => s.trim()).filter(Boolean);
-              if (lines.length) contents = lines;
-            }
-          }
-
-          // Fall back to any deep "description" field that isn't a generic blurb
-          if (!intelReport) {
-            const desc = findByKey(nextData, ["description", "longdescription", "productdescription", "extendeddescription"]);
-            if (desc && !desc.toLowerCase().includes("yu-gi-oh")) {
-              intelReport = stripHtml(desc);
-            }
-          }
-        } catch {}
-      }
-    }
-
-    // Strategy 3: scan raw HTML for JSON-encoded description strings
-    if (!intelReport) {
-      const matches = [...html.matchAll(/"description"\s*:\s*"((?:[^"\\]|\\.){100,})"/g)];
-      for (const m of matches) {
-        try {
-          const text = JSON.parse(`"${m[1]}"`); // unescape JSON string
-          if (!text.toLowerCase().includes("yu-gi-oh") && !text.toLowerCase().includes("pokémon cards, one piece")) {
-            intelReport = stripHtml(text);
-            break;
-          }
-        } catch {}
-      }
-    }
-
-    return { intelReport, contents };
-  } catch {
-    return { intelReport: null, contents: null };
   }
+
+  // Strategies 1-3: HTML scraping fallback (often blocked by Cloudflare, kept as last resort)
+  if (!intelReport) {
+    try {
+      const htmlHeaders = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Referer": "https://www.google.com/",
+        "sec-fetch-dest": "document",
+        "sec-fetch-mode": "navigate",
+        "sec-fetch-site": "none",
+        "Upgrade-Insecure-Requests": "1",
+      };
+      const res = await fetch(url, { headers: htmlHeaders, redirect: "follow" });
+      if (res.ok) {
+        const html = await res.text();
+        if (!html.includes("Just a moment") && !html.includes("challenge-platform")) {
+          function findByKey(obj: any, keys: string[], depth = 0): string | null {
+            if (depth > 12 || !obj || typeof obj !== "object") return null;
+            for (const k of Object.keys(obj)) {
+              if (keys.includes(k.toLowerCase()) && typeof obj[k] === "string" && obj[k].length > 80) return obj[k];
+              const found = findByKey(obj[k], keys, depth + 1);
+              if (found) return found;
+            }
+            return null;
+          }
+          function findArrayByKey(obj: any, keys: string[], depth = 0): any[] | null {
+            if (depth > 12 || !obj || typeof obj !== "object") return null;
+            for (const k of Object.keys(obj)) {
+              if (keys.includes(k.toLowerCase()) && Array.isArray(obj[k]) && obj[k].length) return obj[k];
+              const found = findArrayByKey(obj[k], keys, depth + 1);
+              if (found) return found;
+            }
+            return null;
+          }
+
+          // Strategy 1: JSON-LD
+          for (const block of [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/gi)]) {
+            try {
+              const entries = [JSON.parse(block[1])].flat();
+              for (const entry of entries) {
+                const desc = entry.description ?? null;
+                if (desc && desc.length > 80 && !desc.toLowerCase().includes("yu-gi-oh") && !desc.toLowerCase().includes("pokémon cards, one piece")) {
+                  intelReport = stripHtml(String(desc)); break;
+                }
+              }
+            } catch {}
+            if (intelReport) break;
+          }
+
+          // Strategy 2: __NEXT_DATA__
+          if (!intelReport) {
+            const m = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
+            if (m) {
+              try {
+                const nextData = JSON.parse(m[1]);
+                const extendedData: any[] = findArrayByKey(nextData, ["extendeddata", "extended_data"]) ?? [];
+                for (const item of extendedData) {
+                  const name = (item.name ?? item.displayName ?? "").toLowerCase();
+                  const value = String(item.value ?? "");
+                  if (!value) continue;
+                  if (name.includes("description") || name.includes("product detail")) {
+                    const text = stripHtml(value);
+                    if (text.length > 80) intelReport = text;
+                  }
+                  if (!contents && name.includes("content")) {
+                    const lines = stripHtml(value).split("\n").map((s: string) => s.trim()).filter(Boolean);
+                    if (lines.length) contents = lines;
+                  }
+                }
+                if (!intelReport) {
+                  const desc = findByKey(nextData, ["description", "longdescription", "productdescription"]);
+                  if (desc && !desc.toLowerCase().includes("yu-gi-oh")) intelReport = stripHtml(desc);
+                }
+              } catch {}
+            }
+          }
+
+          // Strategy 3: raw JSON string scan
+          if (!intelReport) {
+            for (const m of [...html.matchAll(/"description"\s*:\s*"((?:[^"\\]|\\.){100,})"/g)]) {
+              try {
+                const text = JSON.parse(`"${m[1]}"`);
+                if (!text.toLowerCase().includes("yu-gi-oh") && !text.toLowerCase().includes("pokémon cards, one piece")) {
+                  intelReport = stripHtml(text); break;
+                }
+              } catch {}
+            }
+          }
+        }
+      }
+    } catch {}
+  }
+
+  return { intelReport, contents };
 }
 
 function parsePullProbabilities(
@@ -419,11 +466,15 @@ router.post("/lookup/tcgplayer", async (req, res) => {
     setName = dedupeWords(setName);
     const suggestedTitle = [titleCase(setName), packType].filter(Boolean).join(" ");
 
+    // Extract product ID for mpapi calls
+    const productIdMatch = url.match(/\/product\/(\d+)\//);
+    const productId = productIdMatch?.[1] ?? null;
+
     // Scrape TCGPlayer for image + price + product details, and fetch Scryfall sets — all in parallel
     const [tcgData, setsRes, pageDetails] = await Promise.all([
       scrapeTCGPlayer(url),
       fetch("https://api.scryfall.com/sets"),
-      scrapeProductPage(url),
+      scrapeProductPage(url, productId),
     ]);
 
     const tcgImageUrl = tcgData.imageUrl;
