@@ -430,11 +430,71 @@ function buildSpecs(set: any, slug: string): { label: string; value: string }[] 
   specs.push({ label: "SET", value: set.name });
   if (set.released_at) specs.push({ label: "RELEASE", value: set.released_at.substring(0, 4) });
   const isBox = /booster[-_]box|booster[-_]display/i.test(slug);
-  specs.push({ label: isBox ? "PACKS / BOX" : "PACKS / BOX", value: isBox ? "36" : "1" });
   const isCollector = /collector/i.test(slug);
-  const isSet = /set[-_]booster/i.test(slug);
-  specs.push({ label: "CARDS / PACK", value: isCollector ? "15" : isSet ? "12" : "15" });
+  const isSetBooster = /set[-_]booster/i.test(slug);
+  const packsPerBox = isCollector ? "12" : isSetBooster ? "30" : "36";
+  specs.push({ label: "PACKS / BOX", value: isBox ? packsPerBox : "1" });
+  specs.push({ label: "CARDS / PACK", value: isSetBooster ? "12" : "15" });
   return specs;
+}
+
+function generateContents(slug: string): string[] {
+  const isCollector = /collector/i.test(slug);
+  const isDraft = /draft/i.test(slug);
+  const isSet = /set[-_]booster/i.test(slug);
+  if (isCollector) return [
+    "15 cards per pack",
+    "5 cards of rarity rare or higher (foil and special frame treatments)",
+    "5 Uncommon cards (including foil uncommons)",
+    "4 Common or special alternate-frame cards",
+    "1 Traditional foil basic land",
+  ];
+  if (isSet) return [
+    "12 cards per pack",
+    "1–2 cards of rarity rare or higher",
+    "2–4 Uncommon cards",
+    "1 Full-art or special treatment card",
+    "1 Art card",
+    "1 Token or ad card",
+  ];
+  // Draft (default)
+  return [
+    "15 cards per pack",
+    "1 card of rarity rare or higher",
+    "3 Uncommon cards",
+    "10 Common cards",
+    "1 Basic land",
+  ];
+}
+
+function generateIntelReport(set: any, slug: string): string {
+  const isCollector = /collector/i.test(slug);
+  const isDraft = /draft/i.test(slug);
+  const isSet = /set[-_]booster/i.test(slug);
+  const isBox = /booster[-_]box|booster[-_]display/i.test(slug);
+  const year = set.released_at ? set.released_at.substring(0, 4) : null;
+  const cardCount = set.card_count ? `${set.card_count}-card` : "";
+  const packCount = isCollector ? "12" : isSet ? "30" : "36";
+  const unit = isBox ? `box of ${packCount} packs` : "pack";
+
+  let report = "";
+  if (isCollector) {
+    report = `${set.name} Collector Boosters are the premium way to collect from this set. Every pack is stacked with foils, extended-art, alternate-art, and special-frame treatments you won't find in any other booster type.\n\n`;
+    report += `Each pack contains 15 cards with multiple guaranteed foil slots and at least one rare or mythic rare with a premium treatment. Collector Boosters are built for players who want the best the set has to offer.`;
+  } else if (isSet) {
+    report = `${set.name} Set Boosters are designed to maximize the excitement of opening packs. Each pack is hand-crafted for the best possible experience, averaging more rares than Draft Boosters.\n\n`;
+    report += `Each 12-card pack includes at least one rare or mythic rare, a curated run of thematically linked cards, an art card, and a chance at a foil or special treatment card.`;
+  } else {
+    report = `${set.name} Draft Boosters are the classic format for Booster Draft and Sealed Deck play. Each pack delivers a balanced mix of commons, uncommons, and rares — everything you need to build a competitive limited deck.\n\n`;
+    report += `Each 15-card pack contains one rare or mythic rare, three uncommons, ten commons, and a basic land. Perfect for drafting with friends or grinding tournaments.`;
+  }
+  if (year || cardCount) {
+    report += `\n\nReleased${year ? ` in ${year}` : ""}, ${set.name} is a ${cardCount} set that rewards both competitive players and dedicated collectors.`;
+  }
+  if (isBox) {
+    report += ` This booster box contains ${packCount} packs.`;
+  }
+  return report;
 }
 
 // Lookup product data from a TCGPlayer URL
@@ -525,6 +585,9 @@ router.post("/lookup/tcgplayer", async (req, res) => {
           }
         }
 
+        const finalContents = pageDetails.contents ?? generateContents(slug);
+        const finalIntelReport = pageDetails.intelReport ?? generateIntelReport(set, slug);
+
         res.json({
           type: "set",
           suggestedTitle,
@@ -535,9 +598,9 @@ router.post("/lookup/tcgplayer", async (req, res) => {
           imageUrl: tcgImageUrl ?? topCards[0]?.imageUrl ?? null,
           usd: tcgLowestPrice,
           specs: buildSpecs(set, slug),
-          intelReport: pageDetails.intelReport,
-          contents: pageDetails.contents,
-          pullProbabilities: parsePullProbabilities(pageDetails.contents ?? [], slug),
+          intelReport: finalIntelReport,
+          contents: finalContents,
+          pullProbabilities: parsePullProbabilities(finalContents, slug),
         });
         return;
       }
