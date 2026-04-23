@@ -464,6 +464,8 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
   const [lookupLoading, setLookupLoading] = useState(false);
   const [lookupResult, setLookupResult] = useState<LookupResult | null>(null);
   const [lookupError, setLookupError] = useState<string | null>(null);
+  const [stylingIntel, setStylingIntel] = useState(false);
+  const [styleError, setStyleError] = useState<string | null>(null);
   // TCG market price used as reference for auto-calculating discount %
   const [tcgMarketPrice, setTcgMarketPrice] = useState(
     product?.tcgMarketPriceCents ? (product.tcgMarketPriceCents / 100).toFixed(2) : ""
@@ -543,6 +545,26 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
       setLookupError(err.message ?? "Lookup failed");
     } finally {
       setLookupLoading(false);
+    }
+  }
+
+  async function handleStyleIntel() {
+    if (!intelReport.trim()) return;
+    setStylingIntel(true);
+    setStyleError(null);
+    try {
+      const res = await fetch(`${API_URL}/api/intel-report/restyle`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ intelReport, productTitle: form.title }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Style failed");
+      setIntelReport(data.intelReport);
+    } catch (err: any) {
+      setStyleError(err.message ?? "Failed to style");
+    } finally {
+      setStylingIntel(false);
     }
   }
 
@@ -821,11 +843,24 @@ function ProductForm({ adminKey, product, onBack, onSaved }: {
 
             {/* Intel Report */}
             <div>
-              <label className="text-[10px] uppercase tracking-[0.2em] text-gray-600 block mb-1.5">Intel Report</label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-[10px] uppercase tracking-[0.2em] text-gray-600">Intel Report</label>
+                {intelReport.trim() && (
+                  <button
+                    type="button"
+                    onClick={handleStyleIntel}
+                    disabled={stylingIntel}
+                    className="rounded border border-cyan-400/30 px-3 py-1 text-[10px] text-cyan-400 hover:bg-cyan-400/10 transition-colors disabled:opacity-40 whitespace-nowrap"
+                  >
+                    {stylingIntel ? "Styling..." : "Style It"}
+                  </button>
+                )}
+              </div>
               <textarea value={intelReport} onChange={(e) => setIntelReport(e.target.value)} rows={6}
                 placeholder={"Write product description paragraphs here.\n\nSeparate paragraphs with a blank line."}
                 className="w-full rounded border border-white/10 bg-black px-4 py-3 text-sm focus:outline-none focus:border-cyan-400/40 resize-y font-sans" />
-              <p className="text-[10px] text-gray-600 mt-1">Separate paragraphs with a blank line. Shown in the Intel Report section on the storefront.</p>
+              {styleError && <p className="text-[10px] text-red-400 mt-1">{styleError}</p>}
+              <p className="text-[10px] text-gray-600 mt-1">Separate paragraphs with a blank line. "Style It" rewrites in TTD brand voice.</p>
             </div>
 
             {/* Pull Probabilities */}

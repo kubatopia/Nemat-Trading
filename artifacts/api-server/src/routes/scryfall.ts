@@ -649,6 +649,65 @@ router.post("/lookup/tcgplayer", async (req, res) => {
   }
 });
 
+// Restyle intel report in the TTD brand voice using Claude
+router.post("/intel-report/restyle", async (req, res) => {
+  const { intelReport, productTitle } = req.body as { intelReport?: string; productTitle?: string };
+  if (!intelReport) { res.status(400).json({ error: "intelReport required" }); return; }
+
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) { res.status(503).json({ error: "ANTHROPIC_API_KEY not configured on Railway" }); return; }
+
+  const styleRef = `These things vanished faster than a pizza at the lair the last time we saw them. But fear not!!! Another batch of mutagen-enhanced TMNT Magic Collector Boosters just crawled out of the sewer and they are LOADED.
+
+We're talking Turtle-powered rares and mythic rares, traditional foils shining brighter than a freshly sharpened katana, and full-art lands that look like they were pulled straight from the underground tunnels of NYC. And yes...there's a chance at the borderless source-material cards dripping with nostalgia thicker than mozzarella on a late-night pepperoni slice.
+
+But the REAL headline? Ohhhh yes...
+
+All four Turtles. Leonardo, Donatello, Raphael, and Michelangelo. Illustrated by the original co-creator himself, Kevin Eastman.
+
+I mean... come on. That's basically the cardboard equivalent of finding the secret entrance to the sewer lair.`;
+
+  try {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 800,
+        messages: [{
+          role: "user",
+          content: `You write product intel copy for Tommy Top Decker Trading Co, a Magic: The Gathering sealed product shop run by hype-driven collectors. Rewrite the intel report below in the exact voice and energy of this style reference — punchy short paragraphs, personality, excitement, collector-speak. Naturally include terms like "rares", "mythic rares", "foils", "collector boosters" where they fit (they get highlighted on-site). Make it feel exclusive and exciting. Product-specific details (set name, contents, what makes it special) must be preserved. Output plain text only — paragraphs separated by a single blank line, no headers, no bullets, no markdown.
+
+STYLE REFERENCE:
+${styleRef}
+
+PRODUCT: ${productTitle ?? "Magic: The Gathering Product"}
+CURRENT INTEL REPORT:
+${intelReport}
+
+Restyled intel report:`,
+        }],
+      }),
+    });
+
+    if (!response.ok) {
+      const err: any = await response.json().catch(() => ({}));
+      res.status(500).json({ error: err.error?.message ?? "Anthropic API failed" });
+      return;
+    }
+
+    const data: any = await response.json();
+    const text: string = data.content?.[0]?.text ?? "";
+    res.json({ intelReport: text.trim() });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message ?? "Failed to restyle" });
+  }
+});
+
 // Remove background from an image URL using remove.bg
 router.post("/remove-background", async (req, res) => {
   const { imageUrl } = req.body as { imageUrl?: string };
